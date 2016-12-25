@@ -7,7 +7,7 @@ create table resource_ids (resource text, id integer primary key);
 create table resource_coords (resource text, lat real, lng real);
 .import coords.tsv resource_coords
 
-create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use parse-wikipedia-revisions to get this from the stub-meta-history
+-- create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use parse-wikipedia-revisions to get this from the stub-meta-history
 
 -- create table pages (id integer primary key, title text);
 -- insert into pages select page_id, page_title from revisions on conflict ignore;
