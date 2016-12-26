@@ -62,6 +62,9 @@ insert into top_twenty_interpage_similarities_json
 
 create table top_twenty_interpage_similarities (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
 
+insert into top_twenty_interpage_similarities
+  select page1_id, epochyear, json_each.key, json_each.value from
+    (select page1_id, epochyear, json_each.value from top_twenty_interpage_similarities_json, json_each(similarities)) t, json_each(t.value);
 -- (def pages (map :id (clojure.java.jdbc/query ... ["select id from page_coords"])))
 -- (def epochyears (map :epochyear (clojure.java.jdbc/query ... ["select epochyear from epochyears"])))
 -- (for [y epochyears] (clojure.java.jdbc/with-db-transaction [txn ...] (doall (for [p pages] (clojure.java.jdbc/execute! txn ["insert into top_twenty_interpage_similarities select a.page_id, b.page_id, epochyear, -log(sum((a.tfidf * b.tfidf) / (a.magnitude * b.magnitude))) similarity from user_relevance_to_page_magnitudes a join user_relevance_to_page_magnitudes b using (epochyear, user_id) where a.page_id = ? and epochyear = ? and b.page_id != a.page_id group by b.page_id order by similarity limit 20" p y]))) nil))
