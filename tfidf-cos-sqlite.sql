@@ -10,7 +10,7 @@ create table resource_coords (resource text, lat real, lng real);
 -- create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use parse-wikipedia-revisions to get this from the stub-meta-history
 
 create table pages (id integer primary key, title text);
-insert into pages select page_id, page_title from revisions on conflict ignore;
+insert into pages select distinct page_id, page_title from revisions;
 
 create table page_coords (id integer primary key, lat real, lng real);
 insert into page_coords select id, lat, lng from resource_ids i join resource_coords c using (resource);
