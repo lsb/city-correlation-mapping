@@ -15,6 +15,8 @@ insert into page_coords select id, lat, lng from resource_ids i join resource_co
 
 drop table resource_ids; drop table resource_coords;
 
+delete from revisions where page_id not in (select id from page_coords);
+
 create table users (id integer primary key, user text);
 insert into users (user) select user from revisions join page_coords on page_id = page_coords.id group by user order by count(*) desc;
 
