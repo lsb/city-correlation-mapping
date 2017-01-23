@@ -1,5 +1,3 @@
-pragma cache_size = 10000000;
-
 .mode tabs
 create table resource_ids (resource text, id integer primary key);
 .import ids.tsv resource_ids
