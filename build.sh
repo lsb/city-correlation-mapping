@@ -25,4 +25,10 @@ mv smh/revisions.db .
 ./resource_coords-from-bz.sh < geo_coordinates_en.tql.bz2 > coords.tsv
 ./resource_ids-from-bz.sh < page_ids_en.tql.bz2 > ids.tsv
 
-docker run --rm -v "$PWD":/app -w /app alpine sh -c "apk add --update sqlite-dev musl-dev gcc && wget -O math.c 'http://www.sqlite.org/contrib/download/extension-functions.c?get=25' && gcc -g -fPIC -shared math.c -o /usr/lib/math.so && (echo .load math.so ; cat tfidf-cos-sqlite.sql) | sqlite3 revisions.db"
+docker run --rm -v "$PWD":/app -w /app lsb857/mathy-sqlite sh -c "sqlite3 revisions.db < tfidf-cos-sqlite.sql"
+SHARD_COUNT=64
+for SHARD_ID in $(seq 0 $((SHARD_COUNT - 1)))
+do
+    docker run --rm -v "$PWD":/app -w /app -e "SHARD_COUNT=$SHARD_COUNT" -e "SHARD_ID=$SHARD_ID" lsb857/mathy-sqlite sh -c "apk add --no-cache gettext && envsubst < top-twenty.sql.envsubst | sqlite3 revisions.db" &
+done
+

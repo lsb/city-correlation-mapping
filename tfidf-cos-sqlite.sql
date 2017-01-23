@@ -48,24 +48,6 @@ insert into user_relevance_to_page_magnitudes select user_id, page_id, epochyear
 create index i1 on user_relevance_to_page_magnitudes (epochyear, user_id, page_id, tfidf, magnitude);
 create index i2 on user_relevance_to_page_magnitudes (epochyear, page_id, user_id, tfidf, magnitude);
 
-create table top_twenty_interpage_similarities_json (page1_id integer, epochyear integer, similarities json);
-insert into top_twenty_interpage_similarities_json
-  select p.id,
-         y.epochyear,
-         (select json_group_array(json_object('id', page2_id, 'sim', similarity))
-            from (select b.page_id as page2_id,
-                         -log(sum((a.tfidf * b.tfidf) / (a.magnitude * b.magnitude))) as similarity
-                  from user_relevance_to_page_magnitudes a join user_relevance_to_page_magnitudes b
-                  using (epochyear, user_id)
-                  where a.page_id = p.id and a.epochyear = y.epochyear and b.page_id != a.page_id
-                  group by b.page_id order by similarity limit 20))
-  from page_coords p, epochyears y;
-  
 create table top_twenty_interpage_similarities (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
 
-insert into top_twenty_interpage_similarities
-  select page1_id, epochyear, json_extract(json_each.value, '$.id'), json_extract(json_each.value, '$.sim')
-    from top_twenty_interpage_similarities_json, json_each(similarities);
-
-drop table top_twenty_interpage_similarities_json; vacuum;
 
