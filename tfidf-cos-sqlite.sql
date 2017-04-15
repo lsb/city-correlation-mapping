@@ -1,32 +1,28 @@
-.mode tabs
-create table resource_ids (resource text, id integer primary key);
-.import ids.tsv resource_ids
+-- create table page_coords (id integer primary key, lat real, lng real); -- use import-coords.sql
+-- revisions [unclean] (id text pk, time text, text text, uid text, unm text, uip text, pageid text, pagetitle text, pagens text)
+-- create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use mediawiki-json-revisions
 
-create table resource_coords (resource text, lat real, lng real);
-.import coords.tsv resource_coords
-
--- create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use parse-wikipedia-revisions to get this from the stub-meta-history
+update revisions set id=json_extract(id,'$[0]'),
+                     time=json_extract(time,'$[0]'),
+                     uid=json_extract(uid,'$[0]'),
+                     unm=json_extract(unm,'$[0]'),
+                     uip=json_extract(uip,'$[0]'),
+                     pageid=json_extract(pageid,'$[0]'),
+                     pagetitle=json_extract(pagetitle,'$[0]');
 
 create table pages (id integer primary key, title text);
-insert into pages select distinct page_id, page_title from revisions;
+insert into pages select distinct cast(pageid as integer), pagetitle from revisions;
 
-create table page_coords (id integer primary key, lat real, lng real);
-insert into page_coords select id, lat, lng from resource_ids i join resource_coords c using (resource);
-
-drop table resource_ids; drop table resource_coords;
-
-delete from revisions where page_id not in (select id from page_coords);
-
-create table users (id integer primary key, user text);
-insert into users (user) select user from revisions join page_coords on page_id = page_coords.id group by user order by count(*) desc;
+create table users (id integer primary key, uid text, unm text, uip text);
+insert into users (uid, unm, uip) select uid, unm, uip from revisions group by uid, unm, uip order by count(*) desc;
 
 create table epochyears (epochyear integer primary key);
-insert into epochyears select distinct strftime("%Y", epochsecond, "unixepoch") from revisions;
+insert into epochyears select distinct strftime("%Y", time) from revisions;
 
 -- analyze;
 
 create table located_revisions (id integer primary key, epochsecond int, user_id int, page_id int);
-insert into located_revisions select r.id, epochsecond, u.id, page_id from revisions r join users u using (user) join page_coords p on r.page_id = p.id;
+insert into located_revisions select r.id, strftime('%s', time), u.id, p.id from revisions r join users u using (user) join page_coords p on r.page_id = p.id;
 
 drop table revisions; vacuum; analyze;
 
@@ -48,6 +44,6 @@ insert into user_relevance_to_page_magnitudes select user_id, page_id, epochyear
 create index i1 on user_relevance_to_page_magnitudes (epochyear, user_id, page_id, tfidf, magnitude);
 create index i2 on user_relevance_to_page_magnitudes (epochyear, page_id, user_id, tfidf, magnitude);
 
-create table top_twenty_interpage_similarities (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
+create table top_hundred_interpage_similarities (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
 
 
