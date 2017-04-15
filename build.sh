@@ -3,7 +3,7 @@
 mkdir smh/
 for i in {1..27}
 do
-  wget -O - https://dumps.wikimedia.org/enwiki/20161201/enwiki-20161201-stub-meta-history${i}.xml.gz | docker run --rm -i lsb857/mediawiki-json-revisions | gzip -c1 > smh/${i}.tsv.gz
+  wget -O - https://dumps.wikimedia.org/enwiki/20161201/enwiki-20161201-stub-meta-history${i}.xml.gz | gzip -cd | docker run --rm -i lsb857/mediawiki-json-revisions | gzip -c1 > smh/${i}.tsv.gz
 done
 
 wget http://downloads.dbpedia.org/2016-04/core-i18n/en/geo_coordinates_en.tql.bz2
