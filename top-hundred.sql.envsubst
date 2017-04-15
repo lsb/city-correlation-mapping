@@ -1,6 +1,6 @@
 .load math.so
-create temp table top_twenty_interpage_similarities_json_partial (page1_id integer, epochyear integer, similarities json);
-insert into top_twenty_interpage_similarities_json_partial
+create temp table top_hundred_interpage_similarities_json_partial (page1_id integer, epochyear integer, similarities json);
+insert into top_hundred_interpage_similarities_json_partial
   select p.id,
          y.epochyear,
          (select json_group_array(json_object('id', page2_id, 'sim', similarity))
@@ -9,13 +9,12 @@ insert into top_twenty_interpage_similarities_json_partial
                   from user_relevance_to_page_magnitudes a join user_relevance_to_page_magnitudes b
                   using (epochyear, user_id)
                   where a.page_id = p.id and a.epochyear = y.epochyear and b.page_id != a.page_id and a.page_id % $SHARD_COUNT = $SHARD_ID
-                  group by b.page_id order by similarity limit 20))
+                  group by b.page_id order by similarity limit 100))
   from page_coords p, epochyears y;
 
-create temp table top_twenty_interpage_similarities_partial (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
-insert into top_twenty_interpage_similarities_partial
+create temp table top_hundred_interpage_similarities_partial (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
+insert into top_hundred_interpage_similarities_partial
   select page1_id, epochyear, json_extract(json_each.value, '$.id'), json_extract(json_each.value, '$.sim')
-    from top_twenty_interpage_similarities_json, json_each(similarities);
+    from top_hundred_interpage_similarities_json, json_each(similarities);
     
-insert into top_twenty_interpage_similarities select * from top_twenty_interpage_similarities_partial;
-
+insert into top_hundred_interpage_similarities select * from top_hundred_interpage_similarities_partial;
