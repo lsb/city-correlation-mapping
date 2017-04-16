@@ -21,7 +21,7 @@ do
   rm smh/${i}.tsv
 done
 
-docker run --rm -v "$PWD"/app:/app -w /smh lsb857/mathy-sqlite \
+docker run --rm -v "$PWD"/app:/app -w /app lsb857/mathy-sqlite \
   sh -c '(echo "begin;" ; sqlite3 smh/1.db .schema ; for d in smh/*.db ; do sqlite3 ${d} .dump | grep -i insert ; done ; echo "commit;") | sqlite3 revisions.db'
 
 
