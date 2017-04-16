@@ -1,6 +1,5 @@
 -- create table page_coords (id integer primary key, lat real, lng real); -- use import-coords.sql
--- revisions [unclean] (id text pk, time text, text text, uid text, unm text, uip text, pageid text, pagetitle text, pagens text)
--- create table revisions (id integer primary key, epochtime int, user text, page_id int, page_title text); -- use mediawiki-json-revisions
+-- revisions (id text pk, time text, text text, uid text, unm text, uip text, pageid text, pagetitle text, pagens text) --  use mediawiki-json-revisions
 
 update revisions set id=json_extract(id,'$[0]'),
                      time=json_extract(time,'$[0]'),
