@@ -16,7 +16,7 @@ create table users (id integer primary key, uid text, unm text, uip text);
 insert into users (uid, unm, uip) select uid, unm, uip from revisions group by uid, unm, uip order by count(*) desc;
 
 create table epochyears (epochyear integer primary key);
-insert into epochyears select distinct strftime("%Y", time) from revisions;
+insert into epochyears select distinct strftime('%Y', time) from revisions;
 
 -- analyze;
 
@@ -26,7 +26,7 @@ insert into located_revisions select r.id, strftime('%s', time), u.id, p.id from
 drop table revisions; vacuum; analyze;
 
 create table term_frequency (user_id int, page_id int, epochyear int, c int); -- term = user, epochyear = high water mark for visibility
-insert into term_frequency select user_id, page_id, epochyear, count(*) from located_revisions r join epochyears y on strftime("%Y", epochsecond, "unixepoch") <= epochyear group by user_id, page_id, epochyear;
+insert into term_frequency select user_id, page_id, epochyear, count(*) from located_revisions r join epochyears y on strftime('%Y', epochsecond, 'unixepoch') <= epochyear group by user_id, page_id, epochyear;
 
 create table document_frequency (user_id int, epochyear int, c int); -- document = page
 insert into document_frequency select user_id, epochyear, count(distinct page_id) from term_frequency group by user_id, epochyear;
