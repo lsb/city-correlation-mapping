@@ -14,6 +14,7 @@ insert into pages select distinct cast(pageid as integer), pagetitle from revisi
 
 create table users (id integer primary key, uid text, unm text, uip text);
 insert into users (uid, unm, uip) select uid, unm, uip from revisions group by uid, unm, uip order by count(*) desc;
+create index uj on users(json_array(uid,unm,uip));
 
 create table epochyears (epochyear integer primary key);
 insert into epochyears select distinct strftime('%Y', time) from revisions;
@@ -23,7 +24,7 @@ insert into epochyears select distinct strftime('%Y', time) from revisions;
 create table located_revisions (id integer primary key, epochsecond int, user_id int, page_id int);
 insert into located_revisions select cast(r.id as integer), strftime('%s', time), u.id, p.id from revisions r join users u on json_array(r.uid,r.unm,r.uip) = json_array(u.uid,u.unm,u.uip) join page_coords p on cast(r.pageid as integer) = p.id;
 
-drop table revisions; vacuum; analyze;
+drop table revisions; drop index uj; vacuum; analyze;
 
 create table term_frequency (user_id int, page_id int, epochyear int, c int); -- term = user, epochyear = high water mark for visibility
 insert into term_frequency select user_id, page_id, epochyear, count(*) from located_revisions r join epochyears y on strftime('%Y', epochsecond, 'unixepoch') <= epochyear group by user_id, page_id, epochyear;
