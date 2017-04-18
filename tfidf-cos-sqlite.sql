@@ -21,7 +21,7 @@ insert into epochyears select distinct strftime('%Y', time) from revisions;
 -- analyze;
 
 create table located_revisions (id integer primary key, epochsecond int, user_id int, page_id int);
-insert into located_revisions select cast(r.id as integer), strftime('%s', time), u.id, p.id from revisions r join users u using (uid, unm, uip) join page_coords p on cast(r.pageid as integer) = p.id;
+insert into located_revisions select cast(r.id as integer), strftime('%s', time), u.id, p.id from revisions r join users u on json_array(r.uid,r.unm,r.uip) = json_array(u.uid,u.unm,u.uip) join page_coords p on cast(r.pageid as integer) = p.id;
 
 drop table revisions; vacuum; analyze;
 
