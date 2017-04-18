@@ -25,6 +25,7 @@ create table located_revisions (id integer primary key, epochsecond int, user_id
 insert into located_revisions select cast(r.id as integer), strftime('%s', time), u.id, p.id from revisions r join users u on json_array(r.uid,r.unm,r.uip) = json_array(u.uid,u.unm,u.uip) join page_coords p on cast(r.pageid as integer) = p.id;
 
 drop table revisions; drop index uj; vacuum; analyze;
+.load math.so
 
 create table term_frequency (user_id int, page_id int, epochyear int, c int); -- term = user, epochyear = high water mark for visibility
 insert into term_frequency select user_id, page_id, epochyear, count(*) from located_revisions r join epochyears y on strftime('%Y', epochsecond, 'unixepoch') <= epochyear group by user_id, page_id, epochyear;
