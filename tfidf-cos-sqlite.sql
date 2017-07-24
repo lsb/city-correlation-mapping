@@ -1,30 +1,32 @@
 -- create table page_coords (id integer primary key, lat real, lng real); -- use import-coords.sql
--- revisions (id text pk, time text, text text, uid text, unm text, uip text, pageid text, pagetitle text, pagens text) --  use mediawiki-json-revisions
+-- revisions (r text) -- use mediawiki-json-revisions
 
-update revisions set id=json_extract(id,'$[0]'),
-                     time=json_extract(time,'$[0]'),
-                     uid=json_extract(uid,'$[0]'),
-                     unm=json_extract(unm,'$[0]'),
-                     uip=json_extract(uip,'$[0]'),
-                     pageid=json_extract(pageid,'$[0]'),
-                     pagetitle=json_extract(pagetitle,'$[0]');
+create table parsed_revisions (id integer primary key, time text, uid text, unm text, uip text, pageid integer, pagetitle text);
+
+insert into parsed_revisions select cast(json_extract(r,'$.rid') as integer),
+                                    json_extract(r,'$.rtime'),
+                                    json_extract(r, '$.ruid'), json_extract(r, '$.runm'), json_extract(r, '$.ruip'),
+                                    cast(json_extract(r, '$.rpageid') as integer), json_extract(r, '$.rpagetitle') from revisions;
+
+drop table revisions;
 
 create table pages (id integer primary key, title text);
-insert into pages select distinct cast(pageid as integer), pagetitle from revisions;
+insert into pages select distinct pageid, pagetitle from parsed_revisions;
 
 create table users (id integer primary key, uid text, unm text, uip text);
-insert into users (uid, unm, uip) select uid, unm, uip from revisions group by uid, unm, uip order by count(*) desc;
+insert into users (uid, unm, uip) select uid, unm, uip from parsed_revisions group by uid, unm, uip order by count(*) desc;
 create index uj on users(json_array(uid,unm,uip));
 
 create table epochyears (epochyear integer primary key);
-insert into epochyears select distinct strftime('%Y', time) from revisions;
+insert into epochyears select distinct strftime('%Y', time) from parsed_revisions;
 
 -- analyze;
 
 create table located_revisions (id integer primary key, epochsecond int, user_id int, page_id int);
-insert into located_revisions select cast(r.id as integer), strftime('%s', time), u.id, p.id from revisions r join users u on json_array(r.uid,r.unm,r.uip) = json_array(u.uid,u.unm,u.uip) join page_coords p on cast(r.pageid as integer) = p.id;
+insert into located_revisions
+    select r.id, strftime('%s', time), u.id, p.id from parsed_revisions r join users u on json_array(r.uid,r.unm,r.uip) = json_array(u.uid,u.unm,u.uip) join page_coords p on r.pageid = p.id;
 
-drop table revisions; drop index uj; vacuum; analyze;
+drop table parsed_revisions; drop index uj; vacuum; analyze;
 .load math.so
 
 create table term_frequency (user_id int, page_id int, epochyear int, c int); -- term = user, epochyear = high water mark for visibility
