@@ -12,7 +12,7 @@ insert into top_hundred_interpage_similarities_json_partial
                   group by b.page_id order by similarity limit 100))
   from page_coords p, epochyears y;
 
-create temp table top_hundred_interpage_similarities_partial (page1_id integer, page2_id integer, epochyear integer, similarity double precision);
+create temp table top_hundred_interpage_similarities_partial (page1_id integer, epochyear integer, page2_id integer, similarity double precision);
 insert into top_hundred_interpage_similarities_partial
   select page1_id, epochyear, json_extract(json_each.value, '$.id'), json_extract(json_each.value, '$.sim')
     from top_hundred_interpage_similarities_json, json_each(similarities);
