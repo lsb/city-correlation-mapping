@@ -2,12 +2,17 @@
 
 MONTH=20170701
 SHARD_COUNT=64
+LC_ALL=C
 
 wget http://downloads.dbpedia.org/2016-04/core-i18n/en/geo_coordinates_en.tql.bz2
 wget http://downloads.dbpedia.org/2016-04/core-i18n/en/page_ids_en.tql.bz2
 ./resource_coords-from-bz.sh < geo_coordinates_en.tql.bz2 > coords.tsv
 ./resource_ids-from-bz.sh < page_ids_en.tql.bz2 > ids.tsv
-docker run --rm -v "$PWD":/app -w /app lsb857/mathy-sqlite sh -c 'sqlite3 coords.db < import-coords.sql && sqlite3 coords.db "select id from page_coords" > page-ids.tsv'
+sort < coords.tsv > coords.tsv-s
+sort < ids.tsv > ids.tsv-s
+join ids.tsv-s coords.tsv-s | tr ' ' '\t' | cut -f 2,3,4 > page-coords.tsv
+cut -f 1 < page-coords.tsv > page-ids.tsv
+(echo 'create table page_coords (id integer primary key, lat real, lng real);' ; echo '.mode tabs'; echo '.import page-coords.tsv page_coords') | sqlite3 coords.db
 (echo 'BEGIN {' ; cat page-ids.tsv | awk '{print "i[" $1 "]=1;"}' ; echo '} i[gensub(/.+"rpageid":"([^"]+)".+/,"\\1","g")]') > rpageid.awk
 
 mkdir smh/
