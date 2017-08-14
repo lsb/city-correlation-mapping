@@ -1,7 +1,8 @@
 #!/bin/sh
 
-MONTH=20170701
-SHARD_COUNT=64
+YEAR=2017
+MONTH=0701
+WM="https://dumps.wikimedia.org/enwiki"
 LC_ALL=C
 
 wget http://downloads.dbpedia.org/2016-04/core-i18n/en/geo_coordinates_en.tql.bz2
@@ -14,7 +15,6 @@ cut -f 1 < page-coords.tsv > page-ids.tsv
 (echo 'BEGIN {' ; cat page-ids.tsv | awk '{print "i[" $1 "]=1;"}' ; echo '} i[gensub(/.+"rpageid":"([^"]+)".+/,"\\1","g")]') > rpageid.awk
 
 mkdir smh/
-docker run -e MONTH=$MONTH -w /app -v $PWD:/app node:alpine sh -c 'apk add --no-cache ca-certificates wget git sqlite ; npm install git+https://git@github.com/lsb/mediawiki-json-revisions.git ; for i in `seq 1 27` ; do wget -O - https://dumps.wikimedia.org/enwiki/${MONTH}/enwiki-${MONTH}-stub-meta-history${i}.xml.gz | gzip -cd | node node_modules/mediawiki-json-revisions/index.js | awk -f rpageid.awk | lzop -c > smh/${i}.lzop & done ; for i in `seq 1 27` ; do fg || true ; done ; sqlite3 revisions.db "create table revisions (r text)"; (echo .mode tabs; echo .import /dev/stdin revisions ; lzop -cd smh/*.lzop) | sqlite3 revisions.db'
+docker run -e MONTH=$MONTH -e YEAR=$YEAR -e WM=$WM -w /app -v $PWD:/app node:alpine sh -c 'apk add --no-cache ca-certificates wget git findutils; npm install git+https://git@github.com/lsb/mediawiki-json-revisions.git; seq 1 27 | xargs -P 27 -n 1 sh -c \'wget -O - ${WM}/${YEAR}${MONTH}/enwiki-${YEAR}${MONTH}-stub-meta-history${0}.xml.gz | gzip -cd | node node_modules/mediawiki-json-revisions/index.js | awk -f rpageid.awk > smh/${0}.json\''
 
-docker run --rm -v "$PWD":/app -w /app lsb857/mathy-sqlite sh -c 'sqlite3 revisions.db < tfidf-cos-sqlite.sql'
-docker run --rm -v "$PWD":/app -w /app -e SHARD_COUNT=$SHARD_COUNT lsb857/mathy-sqlite sh -c 'apk add --no-cache gettext ; for SHARD_ID in $(seq 0 $((SHARD_COUNT - 1))) ; do envsubst < top-hundred.sql.envsubst | sqlite3 revisions.db & done ; for i in $(seq 0 $SHARD_COUNT) ; do fg || true ; done'
+docker run -e YEAR=$YEAR -v $PWD:/app -w /app lsb857/mathy-sqlite sh -c 'apk add --no-cache findutils gettext ; (echo "create table revisions (r text);" ; echo .mode tabs ; for f in smh/*.json ; do echo .import $f revisions ; done ; cat normalize-revisions.sql tfidf-cos-sqlite.sql) | sqlite3 revisions.db; seq 2001 $YEAR | xargs -P $(( YEAR - 2001 )) -n 1 sh -c \'PAGE_START=0 PAGE_END=1000000 YEAR=$0 envsubst < top-hundred.sql.envsubst | sqlite3 revisions.db > $0.psv\' ; for y in $(seq 2001 $YEAR); do echo .import $y.psv | sqlite3 revisions.db ; done'
