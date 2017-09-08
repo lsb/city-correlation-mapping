@@ -1,12 +1,12 @@
 #!/bin/sh
 
 YEAR=2017
-MONTH=0701
+MONTH=0901
 WM="https://dumps.wikimedia.org/enwiki"
 LC_ALL=C
 
-wget http://downloads.dbpedia.org/2016-04/core-i18n/en/geo_coordinates_en.tql.bz2
-wget http://downloads.dbpedia.org/2016-04/core-i18n/en/page_ids_en.tql.bz2
+wget http://downloads.dbpedia.org/2016-10/core-i18n/en/geo_coordinates_en.tql.bz2
+wget http://downloads.dbpedia.org/2016-10/core-i18n/en/page_ids_en.tql.bz2
 ./resource_coords-from-bz.sh < geo_coordinates_en.tql.bz2 | sort > coords.tsv
 ./resource_ids-from-bz.sh < page_ids_en.tql.bz2 | sort > ids.tsv
 join ids.tsv coords.tsv | tr ' ' '\t' | cut -f 2,3,4 > page-coords.tsv
