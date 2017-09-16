@@ -10,6 +10,9 @@ drop table revisions;
 create table densepages (id integer primary key, pageid integer, pagetitle text);
 insert into densepages (pageid, pagetitle) select pageid, pagetitle from parsed_revisions group by pageid, pagetitle order by count(*) desc;
 
+create table densepage_coords (id integer primary key, lat real, lng real, title text);
+insert into densepage_coords select d.id, lat, lng, pagetitle from densepages d join page_coords p on d.pageid = p.id;
+
 create table users (id integer primary key, uid text, unm text, uip text);
 insert into users (uid, unm, uip) select uid, unm, uip from parsed_revisions group by uid, unm, uip order by count(*) desc;
 create index u on users(json_array(uid,unm,uip));
