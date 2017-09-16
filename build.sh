@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 YEAR=2017
 MONTH=0901
 WM="https://dumps.wikimedia.org/enwiki"
-LC_ALL=C
+export LC_ALL=C
 
 wget http://downloads.dbpedia.org/2016-10/core-i18n/en/geo_coordinates_en.tql.bz2
 wget http://downloads.dbpedia.org/2016-10/core-i18n/en/page_ids_en.tql.bz2
