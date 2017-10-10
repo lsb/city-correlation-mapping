@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/leaflet/leaflet.css"/>
+    <script src="/leaflet/leaflet-src.js"></script>
+    <style>#map { height: 8in; width: 100%; }</style>
+    <script src="/sql.js"></script>
+    <title>Welcome to my web-site</title>
+  </head>
+  <body>
+    <div>W e l c o m e&nbsp;&nbsp;t o&nbsp;&nbsp;m y&nbsp;&nbsp;w e b s i t e</div>
+    <div id="map">
+    </div>
+  </body>
+  <script>
+    var used = [];
+    var lats = [];
+    var lngs = [];
+    var titles = [];
+    var lat30m; // = new Int32Array();
+    var lng30m; // = new Int32Array();
+
+    function loadDB() {
+      return new Promise((resolve, reject) => {
+        var dbXHR = new XMLHttpRequest();
+        dbXHR.open('GET','/similarities.db',true);
+        dbXHR.responseType = 'arraybuffer';
+        dbXHR.onload = () => {
+          if(Math.floor(dbXHR.status / 100) == 2) {
+            var uInt8Array = new Uint8Array(dbXHR.response);
+            var db = new SQL.Database(uInt8Array);
+            window.sdb = db;
+            resolve(db);
+          } else {
+            reject(dbXHR.statusText);
+          }
+        }
+        dbXHR.send();
+      });
+    }
+
+    async function loadHundredThousandPlaces(db, start) {
+      return new Promise((resolve, reject) => { setTimeout(() => {
+        var limit = " where id between " + (start * 100000) + " and " + (start * 100000 + 99999);
+        var contents = db.exec("select id, lat, lng, title from places" + limit)[0].values;
+        contents.forEach(([id, lat, lng, title]) => {
+          used[id] = 1;
+          lats[id] = lat;
+          lngs[id] = lng;
+          titles[id] = title;
+        });
+        console.log(start);
+        resolve();
+      },0); });
+    }
+    async function loadAllPlaces(db) {
+      await loadHundredThousandPlaces(db, 0);
+      await loadHundredThousandPlaces(db, 1);
+      await loadHundredThousandPlaces(db, 2);
+      await loadHundredThousandPlaces(db, 3);
+      await loadHundredThousandPlaces(db, 4);
+      await loadHundredThousandPlaces(db, 5);
+      lats = new Float64Array(lats);
+      lngs = new Float64Array(lngs);
+      used = new Int8Array(used);
+      lat30m = new Int32Array(used.length);
+      lng30m = new Int32Array(used.length);
+      var min_lat_degree = - Math.atan(Math.sinh(Math.PI)) * 180 / Math.PI;
+      var max_lat_degree = - min_lat_degree;
+      used.forEach(function (k,i){
+        if(k === 1) {
+          lng30m[i] = lng2tile(lngs[i],30);
+          lat30m[i] = lat2tile((lats[i] > 0) ? Math.min(max_lat_degree, lats[i]) : Math.max(min_lat_degree, lats[i]), 30);
+        }
+      });
+      return new Promise((res, rej) => res());
+    }
+    function initMap() {
+      var map = L.map('map', {
+        center: [37.7619, -122.4369],
+        zoom: 13,
+        maxZoom: 22,
+        zoomSnap: 0.01,
+      });
+      window.lmap = map;
+      return map;
+    }
+    function lng2tile(lon,zoom) {
+      return (Math.floor((lon+180)/360*Math.pow(2,zoom)));
+    }
+    function lat2tile(lat,zoom) {
+      return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
+    }
+    loadDB().then(loadAllPlaces).then(() => {
+      var map = initMap();
+      var tileSize = {x: 256, y: 256};
+      var pointOverlay = L.GridLayer.extend({
+        createTile: function(coords) {
+          var t = L.DomUtil.create('canvas', 'pOver');
+          t.width = tileSize.x;
+          t.height = tileSize.y;
+          var ctx = t.getContext('2d');
+          var img = ctx.getImageData(0, 0, tileSize.x, tileSize.y);
+
+//    for(var i = tileSize.y * 256 + tileSize.x;--i;) {
+  //  img.data[i*4+0] = 255;
+    //img.data[i*4+1] = 255;
+//    img.data[i*4+2] = 255;
+  //  img.data[i*4+3] = 255;
+    //}
+
+    var lat30 = coords.y << (30 - coords.z);
+          var lng30 = coords.x << (30 - coords.z);
+
+          var x = coords.x;
+          var y = coords.y;
+          var z = coords.z;
+          setTimeout(() => {
+
+            var d = img.data;
+            used.forEach((k,i) => {
+              if(k===1) {
+                const origLat = lat30m[i];
+                const origLng = lng30m[i];
+                const origLatBox = origLat >> (30-z);
+                const origLngBox = origLng >> (30-z);
+                const origLatPx = (origLat >> (30-(z+8))) & 255;
+                const origLngPx = (origLng >> (30-(z+8))) & 255;
+                var shouldRenderPt = origLatBox === y && origLngBox === x;
+                var shouldRenderCloud = shouldRenderPt;
+                if(shouldRenderPt) {
+                  var idx = (256 * origLatPx + origLngPx) * 4;
+                  d[idx] = 0;
+                  d[idx+1] = 0;
+                  d[idx+2] = 0;
+                  d[idx+3] = Math.min(255, img.data[idx+3] + 50); // rgba
+                }
+              }
+            });
+            ctx.putImageData(img,0,0);
+          },0);
+          return t;
+        }
+      });
+
+      
+      var dumbernumbers = L.GridLayer.extend({createTile: function(coords) { var t = document.createElement('canvas'); var size = this.getTileSize(); t.width = size.x ; t.height = size.y; var ctx = t.getContext('2d'); ctx.font = '10px monospace'; setTimeout(() => { ctx.fillText(JSON.stringify([coords.x, coords.y, coords.z]),0,20); ctx.beginPath(); ctx.fillStyle=`rgba(255,255,${200 + Math.floor(Math.random() * 55)},255)`; ctx.rect(0,0,size.x,size.y); ctx.fill()},0); return t; }});
+      map.addLayer(new dumbernumbers());
+      console.log("we're all done");
+      map.addLayer(new pointOverlay());
+    });
+  </script>
+</html>
