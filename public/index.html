@@ -94,6 +94,8 @@
     loadDB().then(loadAllPlaces).then(() => {
       var map = initMap();
       var tileSize = {x: 256, y: 256};
+      var pointShadowSize = 10;
+
       var pointOverlay = L.GridLayer.extend({
         createTile: function(coords) {
           var t = L.DomUtil.create('canvas', 'pOver');
@@ -102,22 +104,19 @@
           var ctx = t.getContext('2d');
           var img = ctx.getImageData(0, 0, tileSize.x, tileSize.y);
 
-//    for(var i = tileSize.y * 256 + tileSize.x;--i;) {
-  //  img.data[i*4+0] = 255;
-    //img.data[i*4+1] = 255;
-//    img.data[i*4+2] = 255;
-  //  img.data[i*4+3] = 255;
-    //}
-
-    var lat30 = coords.y << (30 - coords.z);
+          var lat30 = coords.y << (30 - coords.z);
           var lng30 = coords.x << (30 - coords.z);
 
           var x = coords.x;
           var y = coords.y;
           var z = coords.z;
+
+          var points = new Uint8ClampedArray(65536);
+          var shadow = new Uint8ClampedArray(65536);
           setTimeout(() => {
 
-            var d = img.data;
+            const d = img.data;
+            var i,j,pi,pj;
             used.forEach((k,i) => {
               if(k===1) {
                 const origLat = lat30m[i];
@@ -126,15 +125,40 @@
                 const origLngBox = origLng >> (30-z);
                 const origLatPx = (origLat >> (30-(z+8))) & 255;
                 const origLngPx = (origLng >> (30-(z+8))) & 255;
-                var shouldRenderPt = origLatBox === y && origLngBox === x;
-                var shouldRenderCloud = shouldRenderPt;
+                const shouldRenderPt = origLatBox === y && origLngBox === x;
+                const shouldRenderShadow = Math.abs(origLatBox - y) < 2 && Math.abs(origLngBox - x) < 2;
                 if(shouldRenderPt) {
-                  var idx = (256 * origLatPx + origLngPx) * 4;
-                  d[idx] = 0;
-                  d[idx+1] = 0;
-                  d[idx+2] = 0;
-                  d[idx+3] = Math.min(255, img.data[idx+3] + 50); // rgba
+                  points[256 * origLatPx + origLngPx] = 255;
                 }
+
+                if(shouldRenderShadow) {
+                  for(i = -10; i <= 10 ; i++) {
+                    for(j = -10; j <= 10 ; j++) {
+                      pi = origLatBox * 256 + origLatPx + i;
+                      pj = origLngBox * 256 + origLngPx + j;
+                      if((i * i + j * j <= 100) && (pi >> 8 === y) && (pj >> 8 === x)) {
+                        shadow[256 * (pi & 255) + (pj & 255)] += 20;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            shadow.forEach((k,i) => {
+              if(k !== 0) {
+                d[i*4] = 0;
+                d[i*4 + 1] = 128;
+                d[i*4 + 2] = 255;
+                d[i*4 + 3] = k;
+              }
+            });
+            points.forEach((k,i) => {
+              if(k !== 0) {
+                d[i*4] = 0;
+                d[i*4 + 1] = 0;
+                d[i*4 + 2] = 0;
+                d[i*4 + 3] = k;
               }
             });
             ctx.putImageData(img,0,0);
