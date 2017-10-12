@@ -110,9 +110,10 @@
           var x = coords.x;
           var y = coords.y;
           var z = coords.z;
-
-          var points = new Uint8ClampedArray(65536);
-          var shadow = new Uint8ClampedArray(65536);
+          const z8 = (1 << (z+8));
+          const z0 = (1 << z);
+          const points = new Uint8ClampedArray(65536);
+          const shadow = new Uint8ClampedArray(65536);
           setTimeout(() => {
 
             const d = img.data;
@@ -126,7 +127,8 @@
                 const origLatPx = (origLat >> (30-(z+8))) & 255;
                 const origLngPx = (origLng >> (30-(z+8))) & 255;
                 const shouldRenderPt = origLatBox === y && origLngBox === x;
-                const shouldRenderShadow = Math.abs(origLatBox - y) < 2 && Math.abs(origLngBox - x) < 2;
+                const shouldRenderShadow = (((origLatBox - y + z0) & (z0-1)) <= 1 || ((origLatBox - y + z0) & (z0-1)) >= z0-1) &&
+                                           (((origLngBox - x + z0) & (z0-1)) <= 1 || ((origLngBox - x + z0) & (z0-1)) >= z0-1);
                 if(shouldRenderPt) {
                   points[256 * origLatPx + origLngPx] = 255;
                 }
@@ -134,8 +136,8 @@
                 if(shouldRenderShadow) {
                   for(i = -10; i <= 10 ; i++) {
                     for(j = -10; j <= 10 ; j++) {
-                      pi = origLatBox * 256 + origLatPx + i;
-                      pj = origLngBox * 256 + origLngPx + j;
+                      pi = ((origLatBox * 256 + origLatPx + i) + z8) & (z8 - 1);
+                      pj = ((origLngBox * 256 + origLngPx + j) + z8) & (z8 - 1);
                       if((i * i + j * j <= 100) && (pi >> 8 === y) && (pj >> 8 === x)) {
                         shadow[256 * (pi & 255) + (pj & 255)] += 20;
                       }
