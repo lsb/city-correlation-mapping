@@ -114,6 +114,8 @@
           const z0 = (1 << z);
           const points = new Uint8ClampedArray(65536);
           const shadow = new Uint8ClampedArray(65536);
+          const shadowSize = 5;
+
           setTimeout(() => {
 
             const d = img.data;
@@ -122,10 +124,13 @@
               if(k===1) {
                 const origLat = lat30m[i];
                 const origLng = lng30m[i];
+
+                const origLatPt = origLat >> (30-(z+8));
+                const origLngPt = origLng >> (30-(z+8));
                 const origLatBox = origLat >> (30-z);
                 const origLngBox = origLng >> (30-z);
-                const origLatPx = (origLat >> (30-(z+8))) & 255;
-                const origLngPx = (origLng >> (30-(z+8))) & 255;
+                const origLatPx = origLatPt & 255;
+                const origLngPx = origLngPt & 255;
                 const shouldRenderPt = origLatBox === y && origLngBox === x;
                 const shouldRenderShadow = (((origLatBox - y + z0) & (z0-1)) <= 1 || ((origLatBox - y + z0) & (z0-1)) >= z0-1) &&
                                            (((origLngBox - x + z0) & (z0-1)) <= 1 || ((origLngBox - x + z0) & (z0-1)) >= z0-1);
@@ -134,12 +139,12 @@
                 }
 
                 if(shouldRenderShadow) {
-                  for(i = -10; i <= 10 ; i++) {
-                    for(j = -10; j <= 10 ; j++) {
-                      pi = ((origLatBox * 256 + origLatPx + i) + z8) & (z8 - 1);
-                      pj = ((origLngBox * 256 + origLngPx + j) + z8) & (z8 - 1);
-                      if((i * i + j * j <= 100) && (pi >> 8 === y) && (pj >> 8 === x)) {
-                        shadow[256 * (pi & 255) + (pj & 255)] += 20;
+                  for(i = -shadowSize; i <= shadowSize ; i++) {
+                    for(j = -shadowSize; j <= shadowSize ; j++) {
+                      pi = ((origLatPt + i) + z8) & (z8 - 1);
+                      pj = ((origLngPt + j) + z8) & (z8 - 1);
+                      if((i * i + j * j <= shadowSize * shadowSize) && (pi >> 8 === y) && (pj >> 8 === x)) {
+                        shadow[256 * (pi & 255) + (pj & 255)] += 2000;
                       }
                     }
                   }
