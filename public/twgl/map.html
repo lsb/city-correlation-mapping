@@ -102,14 +102,6 @@ void main() {
       ptc[i*12+1] = ptc[i*12+3] = ptc[i*12+5] = ptc[i*12+7] = ptc[i*12+9] = ptc[i*12+11] = lat;
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
-    zeroPTC = new Int32Array([-1,-1,-1,1,1,1,1,1,1,-1,-1,-1]);
-    onePTC = zeroPTC.map(i => i * 2);
-    qb = 1024 * 1024 * 256;
-    hb = 1024 * 1024 * 512;
-    ob = 1024 * 1024 * 1023;
-    largePTC = new Int32Array([-ob, -qb, -ob, qb, ob, qb, ob, qb, ob, -qb, -ob, -qb]);
-    largeUnwrappedPTC = new Int32Array([-1, -hb, -1, hb, 1, hb, 1, hb, 1, -hb, -1, -hb]);
-    demoPTC = new Int32Array([...largePTC, ...largeUnwrappedPTC]);
   </script>
   <script>
     "use strict";
@@ -120,7 +112,7 @@ void main() {
 
     const programInfo = twgl.createProgramInfo(gl, ["p30b1vtxboxes", "fs"]);
     const arrays = {
-      p30b1: {numComponents: 2, data: ptc}//demoPTC},//new Float32Array(demoPTC)},
+      p30b1: {numComponents: 2, data: ptc}
     };
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 
@@ -148,7 +140,6 @@ void main() {
       console.log({shadowTime: Date.now()});
       twgl.setUniforms(programInfo, {rad: 1.5, r: 0, g: 0, b: 0});
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
-      //requestAnimationFrame(render);
       console.log({pointTime: Date.now()});
       gl.finish();
       console.log({finishTime: Date.now()});
@@ -158,7 +149,6 @@ void main() {
       console.log({copyTime: Date.now(), ...xyz});
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
-    //window.addEventListener("load", () => render((Date.now()/10) % 86400000));
     setTimeout(() => render({x:327, y:791, z:11}, document.getElementById("f2")),0);
     setTimeout(() => render({x:603, y:769, z:11}, document.getElementById("f3")),0);
     setTimeout(() => render({x:5, y:12, z:5}, document.getElementById("f4")),0);
@@ -170,7 +160,5 @@ void main() {
     setTimeout(() => render({x:1, y:0, z:1}, document.getElementById("w1")),0);
     setTimeout(() => render({x:0, y:1, z:1}, document.getElementById("w2")),0);
     setTimeout(() => render({x:1, y:1, z:1}, document.getElementById("w3")),0);
-
-    //Interesting tiles: [0,0,0], [327,791,11], [5,13,5], [603,769,11]
   </script>
 </html>
