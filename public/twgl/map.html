@@ -51,21 +51,6 @@
       gl_Position = vec4((vec2(pGlobal) + frag_pos * rad)/128.0 * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0.0, 1.0);
     }
   </script>
-  <script id="vp30b1vtxboxes" type="notjs">#version 300 es
-    in vec2 vp30b1;
-    out vec2 frag_pos;
-    uniform float x;
-    uniform float y;
-    uniform float z;
-    uniform float rad;
-    void main() {
-      frag_pos = sign(vp30b1);
-      vec2 pGlobal = (abs(vp30b1) / exp2(22.0 - z)) - vec2(x,y) * 256.0; // 22 is max zoom
-      pGlobal.x += exp2(z + 8.0) * ((pGlobal.x > (256.0 + rad)) ? -1.0 : ((-rad > pGlobal.x) ? 1.0 : 0.0)); // .y wraps around lng
-      
-      gl_Position = vec4((vec2(pGlobal + frag_pos * rad)/128.0) * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0, 1);
-    }
-  </script>
   <script id="fs" type="notjs">#version 300 es
 precision highp float;
 uniform float r;
@@ -116,14 +101,6 @@ void main() {
       ptc[i*12+0] = ptc[i*12+2] = ptc[i*12+4] = ptc[i*12+6] = ptc[i*12+8] = ptc[i*12+10] = lng;
       ptc[i*12+1] = ptc[i*12+3] = ptc[i*12+5] = ptc[i*12+7] = ptc[i*12+9] = ptc[i*12+11] = lat;
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
-    }});
-    vptc = new Float32Array(lat30m.length * 12);
-    used.forEach((e,i) => { if(e>0) {
-      const lat = lat30m[i];
-      const lng = lng30m[i];
-      vptc[i*12+0] = vptc[i*12+2] = vptc[i*12+4] = vptc[i*12+6] = vptc[i*12+8] = vptc[i*12+10] = lng;
-      vptc[i*12+1] = vptc[i*12+3] = vptc[i*12+5] = vptc[i*12+7] = vptc[i*12+9] = vptc[i*12+11] = lat;
-      vptc[i*12+0] *= -1; vptc[i*12+1] *= -1; vptc[i*12+2] *= -1; vptc[i*12+9] *= -1; vptc[i*12+10] *= -1; vptc[i*12+11] *= -1;
     }});
     zeroPTC = new Int32Array([-1,-1,-1,1,1,1,1,1,1,-1,-1,-1]);
     onePTC = zeroPTC.map(i => i * 2);
