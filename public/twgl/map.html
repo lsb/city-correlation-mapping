@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>web sitelol</title>
+    <style>
+      canvas {
+          display: inline-block;
+          width: 256px;//100vw;
+          height: 256px;//100vh;
+          margin: auto;
+      }
+      #b {
+        position: absolute;
+        top: 10px;
+        width: 100%;
+        text-align: center;
+        z-index: 2;
+      }
+    </style>
+  </head>
+  <body style="background-color:pink">
+    <canvas id="c" style="visibility:hidden;position:fixed;x:0;y:0"></canvas><br>
+    <div id="b">hi lol</div>
+    <div>
+      here is some text lol
+      <canvas id="f1"></canvas>
+      <canvas id="f2"></canvas>
+      <canvas id="f3"></canvas>
+      <canvas id="f4"></canvas><br>
+      <canvas id="f5"></canvas><canvas id="f6"></canvas>
+      <br><br>
+      <canvas id="w0"></canvas><canvas id="w1"></canvas><br>
+      <canvas id="w2"></canvas><canvas id="w3"></canvas>
+    </div>
+  </body>
+  <script id="p30b1vtxboxes" type="notjs">#version 300 es
+    in ivec2 p30b1;
+    out vec2 frag_pos;
+    uniform uint x;
+    uniform uint y;
+    uniform uint z;
+    uniform float rad;
+    void main() {
+      frag_pos = vec2(sign(p30b1));
+      ivec2 pGlobal = ((abs(p30b1) >> (22 - int(z))) - (ivec2(x,y) << 8));
+      int irad = int(rad+1.0);
+      pGlobal.x += (1 << (int(z)+8)) * ((pGlobal.x > (256 + irad)) ? -1 : ((-irad > pGlobal.x) ? 1 : 0));
+
+      gl_Position = vec4((vec2(pGlobal) + frag_pos * rad)/128.0 * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0.0, 1.0);
+    }
+  </script>
+  <script id="vp30b1vtxboxes" type="notjs">#version 300 es
+    in vec2 vp30b1;
+    out vec2 frag_pos;
+    uniform float x;
+    uniform float y;
+    uniform float z;
+    uniform float rad;
+    void main() {
+      frag_pos = sign(vp30b1);
+      vec2 pGlobal = (abs(vp30b1) / exp2(22.0 - z)) - vec2(x,y) * 256.0; // 22 is max zoom
+      pGlobal.x += exp2(z + 8.0) * ((pGlobal.x > (256.0 + rad)) ? -1.0 : ((-rad > pGlobal.x) ? 1.0 : 0.0)); // .y wraps around lng
+      
+      gl_Position = vec4((vec2(pGlobal + frag_pos * rad)/128.0) * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0, 1);
+    }
+  </script>
+  <script id="fs" type="notjs">#version 300 es
+precision highp float;
+uniform float r;
+uniform float g;
+uniform float b;
+uniform float rad;
+in vec2 frag_pos;
+out vec4 outColor;
+
+void main() {
+  float color = 1.0 - smoothstep(0.25/rad, 0.0, 1.0 - length(frag_pos));
+  if(color == 0.0) {
+    discard;
+  } else {
+    outColor = vec4( r, g, b, color);
+  }
+}
+  </script>
+
+  <script src="twgl.min.js"></script>
+  <script src="places.js"></script>
+  <script>
+    function lng2tile(lon,zoom) {
+      return (Math.floor((lon+180)/360*Math.pow(2,zoom)));
+    }
+    function lat2tile(lat,zoom) {
+      return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
+    }
+    used = new Uint8Array(places.length);
+    lat30m = new Uint32Array(places.length);
+    lng30m = new Uint32Array(places.length);
+    titles = [];
+
+    const min_lat_degree = - Math.atan(Math.sinh(Math.PI)) * 180 / Math.PI;
+    const max_lat_degree = - min_lat_degree;
+
+    places.forEach(function([id, lat, lng, title]) {
+      used[id] = 1;
+      lat30m[id] = lat2tile((lat > 0) ? Math.min(max_lat_degree, lat) : Math.max(min_lat_degree, lat), 30);
+      lng30m[id] = lng2tile(lng,30);
+    });
+  </script>
+  <script>
+    ptc = new Int32Array(lat30m.length * 12); // a0_0 n0_0 a0_0 n0_1 a0_1 n0_1  a0_1 n0_1 a0_1 n0_0 a0_0 n0_0  a1_
+    used.forEach((e,i) => { if(e>0) {
+      const lat = lat30m[i];
+      const lng = lng30m[i];
+      ptc[i*12+0] = ptc[i*12+2] = ptc[i*12+4] = ptc[i*12+6] = ptc[i*12+8] = ptc[i*12+10] = lng;
+      ptc[i*12+1] = ptc[i*12+3] = ptc[i*12+5] = ptc[i*12+7] = ptc[i*12+9] = ptc[i*12+11] = lat;
+      ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
+    }});
+    vptc = new Float32Array(lat30m.length * 12);
+    used.forEach((e,i) => { if(e>0) {
+      const lat = lat30m[i];
+      const lng = lng30m[i];
+      vptc[i*12+0] = vptc[i*12+2] = vptc[i*12+4] = vptc[i*12+6] = vptc[i*12+8] = vptc[i*12+10] = lng;
+      vptc[i*12+1] = vptc[i*12+3] = vptc[i*12+5] = vptc[i*12+7] = vptc[i*12+9] = vptc[i*12+11] = lat;
+      vptc[i*12+0] *= -1; vptc[i*12+1] *= -1; vptc[i*12+2] *= -1; vptc[i*12+9] *= -1; vptc[i*12+10] *= -1; vptc[i*12+11] *= -1;
+    }});
+    zeroPTC = new Int32Array([-1,-1,-1,1,1,1,1,1,1,-1,-1,-1]);
+    onePTC = zeroPTC.map(i => i * 2);
+    qb = 1024 * 1024 * 256;
+    hb = 1024 * 1024 * 512;
+    ob = 1024 * 1024 * 1023;
+    largePTC = new Int32Array([-ob, -qb, -ob, qb, ob, qb, ob, qb, ob, -qb, -ob, -qb]);
+    largeUnwrappedPTC = new Int32Array([-1, -hb, -1, hb, 1, hb, 1, hb, 1, -hb, -1, -hb]);
+    demoPTC = new Int32Array([...largePTC, ...largeUnwrappedPTC]);
+  </script>
+  <script>
+    "use strict";
+    console.log('hi lol');
+    const gl = document.querySelector("#c").getContext("webgl2");
+    gl.enable( gl.BLEND );
+    gl.blendFuncSeparate( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA );
+
+    const programInfo = twgl.createProgramInfo(gl, ["p30b1vtxboxes", "fs"]);
+    const arrays = {
+      p30b1: {numComponents: 2, data: ptc}//demoPTC},//new Float32Array(demoPTC)},
+    };
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+
+    function render(xyz, destinationCanvas) {
+      console.log({startTime: Date.now()});
+      twgl.resizeCanvasToDisplaySize(gl.canvas);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+      const uniforms = {
+        x: 5,
+        y: 12,
+        z: 5,
+        rad: 16,
+        r: 0.375,//0.25,
+        g: 0.75,//0.5,
+        b: 1,//1,
+        ...xyz
+      };
+
+      gl.useProgram(programInfo.program);
+      twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+      
+      twgl.setUniforms(programInfo, uniforms);
+      twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
+      console.log({shadowTime: Date.now()});
+      twgl.setUniforms(programInfo, {rad: 1.5, r: 0, g: 0, b: 0});
+      twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
+      //requestAnimationFrame(render);
+      console.log({pointTime: Date.now()});
+      gl.finish();
+      console.log({finishTime: Date.now()});
+      destinationCanvas.width = gl.canvas.width;
+      destinationCanvas.height = gl.canvas.height;
+      destinationCanvas.getContext("2d").drawImage(gl.canvas,0,0,gl.canvas.width,gl.canvas.height);
+      console.log({copyTime: Date.now(), ...xyz});
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    //window.addEventListener("load", () => render((Date.now()/10) % 86400000));
+    setTimeout(() => render({x:327, y:791, z:11}, document.getElementById("f2")),0);
+    setTimeout(() => render({x:603, y:769, z:11}, document.getElementById("f3")),0);
+    setTimeout(() => render({x:5, y:12, z:5}, document.getElementById("f4")),0);
+    setTimeout(() => render({x:0, y:0, z:0}, document.getElementById("f1")),0);
+    setTimeout(() => render({x:255, y:141, z:8}, document.getElementById("f5")),0);
+    setTimeout(() => render({x:0, y:141, z:8}, document.getElementById("f6")),0);
+    
+    setTimeout(() => render({x:0, y:0, z:1}, document.getElementById("w0")),0);
+    setTimeout(() => render({x:1, y:0, z:1}, document.getElementById("w1")),0);
+    setTimeout(() => render({x:0, y:1, z:1}, document.getElementById("w2")),0);
+    setTimeout(() => render({x:1, y:1, z:1}, document.getElementById("w3")),0);
+
+    //Interesting tiles: [0,0,0], [327,791,11], [5,13,5], [603,769,11]
+  </script>
+</html>
