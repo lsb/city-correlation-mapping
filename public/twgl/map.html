@@ -96,7 +96,7 @@ void main() {
     });
   </script>
   <script>
-    ptc = new Int32Array(lat30m.length * 12); // a0_0 n0_0 a0_0 n0_1 a0_1 n0_1  a0_1 n0_1 a0_1 n0_0 a0_0 n0_0  a1_
+    ptc = new Int32Array(lat30m.length * 12); // lng- lat- lng- lat+ lng+ lat+  lng+ lat+ lng+ lat- lng- lat-    lng...
     used.forEach((e,i) => { if(e>0) {
       const lat = lat30m[i];
       const lng = lng30m[i];
