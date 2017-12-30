@@ -80,9 +80,10 @@ void main() {
     function lat2tile(lat,zoom) {
       return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
     }
-    used = new Uint8Array(places.length);
-    lat30m = new Uint32Array(places.length);
-    lng30m = new Uint32Array(places.length);
+    const maxPlaceId = places.slice(-1)[0][0] + 1;
+    used = new Uint8Array(maxPlaceId);
+    lat30m = new Uint32Array(maxPlaceId);
+    lng30m = new Uint32Array(maxPlaceId);
     titles = [];
 
     const min_lat_degree = - Math.atan(Math.sinh(Math.PI)) * 180 / Math.PI;
