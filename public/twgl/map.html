@@ -70,9 +70,54 @@ void main() {
   }
 }
   </script>
+  <script id="edgeEveryTriangle" type="notjs">#version 300 es
+    in ivec4 edge;
+    flat out ivec4 srcdst;
+    uniform uint z;
+    void main() {
+      ivec4 unsortedsrcdst = abs(edge) >> (22 - int(z));
+      srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
+      //gl_Position = vec4(vec2(mat3(1.5,1.5,-1.0,-1.5,1.5,0.0,0.0,0.0,1.0) * vec3(sign(edge.xy),1.0)), 0.0, 1.0);
+      gl_Position = (edge.y < 0) ? vec4(-1.0,-3.0,0.0,1.0) : (edge.x < 0 ? vec4(-1.0,3.0,0.0,1.0) : vec4(2.0,0.0,0.0,1.0));
+    }
+  </script>
+  <script id="smoothThickEdge" type="notjs">#version 300 es
+    precision highp float;
+    flat in ivec4 srcdst;
+    uniform uint x;
+    uniform uint y;
+    uniform float edgeR;
+    uniform float edgeG;
+    uniform float edgeB;
+    uniform float edgeWidth;
+    uniform float edgeDecayPx;
+    uniform float edgeDisappearPx;
+    out vec4 outcolor;
+    void main() {
+      //outcolor = vec4(edgeR, edgeG, edgeB, 0.05); return;
+      ivec2 currentPoint = ivec2((x << 8) + uint(gl_FragCoord.x), (y << 8) + uint(255) - uint(gl_FragCoord.y));
+      vec4 edgeRel = vec4(srcdst - ivec4(currentPoint, currentPoint));
+      float baseEdgeOpacity = 1.0 - smoothstep(0.0, 1.0, smoothstep(edgeDecayPx, edgeDisappearPx, min(length(edgeRel.xy), length(edgeRel.zw))));
+      vec4 sER = sign(edgeRel);
+      vec2 edgeProgress = smoothstep(0.0,1.0,smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5,0.5))));
+      vec2 mixedLatitude = mix(edgeRel.yy, edgeRel.ww, edgeProgress);
+      float minLat = (sign(mixedLatitude.x) != sign(mixedLatitude.y)) ? 0.0 : min(abs(mixedLatitude.x), abs(mixedLatitude.y));
+      float edgeOpacity = baseEdgeOpacity * (1.0 - smoothstep(0.5 * edgeWidth, edgeWidth, minLat));
+      if(sER.x == sER.z || sER.y == sER.w
+           || edgeDisappearPx < length(edgeRel.xy)
+           || edgeDisappearPx < length(edgeRel.zw)
+           || edgeOpacity == 0.0
+        ) {
+        discard;
+      } else {
+       outcolor = vec4(edgeR, edgeG, edgeB, edgeOpacity);
+      }
+    }
+  </script>
 
   <script src="twgl.min.js"></script>
   <script src="places.js"></script>
+  <script src="edgeSedgeD.js"></script>
   <script>
     function lng2tile(lon,zoom) {
       return (Math.floor((lon+180)/360*Math.pow(2,zoom)));
@@ -104,6 +149,21 @@ void main() {
       ptc[i*12+1] = ptc[i*12+3] = ptc[i*12+5] = ptc[i*12+7] = ptc[i*12+9] = ptc[i*12+11] = lat;
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
+    etc = new Int32Array(edgeS.length * 12); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da  sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
+    edgeS.forEach((s,i) => {
+      const ei = i * 12;
+      const d = edgeD[i];
+      const sa = lat30m[s];
+      const sn = lng30m[s];
+      const da = lat30m[d];
+      const dn = lng30m[d];
+      etc[ei+0] = etc[ei+4] = etc[ei+8] = sn;
+      etc[ei+1] = etc[ei+5] = etc[ei+9] = sa;
+      etc[ei+2] = etc[ei+6] = etc[ei+10] = dn;
+      etc[ei+3] = etc[ei+7] = etc[ei+11] = da;
+      etc[ei+0] = -sn;
+      etc[ei+9] = -sa;
+    });
   </script>
   <script>
     "use strict";
@@ -113,13 +173,19 @@ void main() {
     gl.blendFuncSeparate( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA );
 
     const programInfo = twgl.createProgramInfo(gl, ["p30b1vtxboxes", "fs"]);
+    const edgeProgramInfo = twgl.createProgramInfo(gl, ["edgeEveryTriangle","smoothThickEdge"]);
     const arrays = {
       p30b1: {numComponents: 2, data: ptc}
     };
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 
+    const edgeArrays = {
+      edge: {numComponents: 4, data: etc}
+    };
+    const edgeBufferInfo = twgl.createBufferInfoFromArrays(gl, edgeArrays);
+
     function render(xyz, destinationCanvas) {
-      console.log({startTime: Date.now()});
+      const startTime = Date.now();
       twgl.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -131,24 +197,39 @@ void main() {
         r: 0.375,//0.25,
         g: 0.75,//0.5,
         b: 1,//1,
+        edgeR: 0.75,
+        edgeG: 0.25,
+        edgeB: 0.25,
+        edgeWidth: 0.5,
+        edgeDecayPx: 4, // maybe make this proportional to window size lol
+        edgeDisappearPx: 1024,
         ...xyz
       };
 
       gl.useProgram(programInfo.program);
       twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
-      
       twgl.setUniforms(programInfo, uniforms);
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
-      console.log({shadowTime: Date.now()});
-      twgl.setUniforms(programInfo, {rad: 1.5, r: 0, g: 0, b: 0});
+      const shadowTime = Date.now();
+
+      gl.useProgram(edgeProgramInfo.program);
+      twgl.setBuffersAndAttributes(gl, edgeProgramInfo, edgeBufferInfo);
+      twgl.setUniforms(edgeProgramInfo, uniforms);
+      twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
+      const edgeTime = Date.now();
+
+      gl.useProgram(programInfo.program);
+      twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+      twgl.setUniforms(programInfo, {...uniforms, ...({rad: 1.5, r: 0, g: 0, b: 0})});
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
-      console.log({pointTime: Date.now()});
+      const pointTime = Date.now();
       gl.finish();
-      console.log({finishTime: Date.now()});
+      const finishTime = Date.now();
       destinationCanvas.width = gl.canvas.width;
       destinationCanvas.height = gl.canvas.height;
       destinationCanvas.getContext("2d").drawImage(gl.canvas,0,0,gl.canvas.width,gl.canvas.height);
-      console.log({copyTime: Date.now(), ...xyz});
+      const copyTime = Date.now();
+      console.log({startTime, shadowTime, edgeTime, pointTime, finishTime, copyTime});
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
     setTimeout(() => render({x:327, y:791, z:11}, document.getElementById("f2")),0);
