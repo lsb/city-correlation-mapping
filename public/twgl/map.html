@@ -19,6 +19,9 @@
         z-index: 2;
       }
     </style>
+    <link rel="stylesheet" href="/leaflet/leaflet.css"/>
+    <script src="/leaflet/leaflet-src.js"></script>
+    <style>#map { height: 90vh; width: 90vw; }</style>
   </head>
   <body style="background-color:white">
     <canvas id="c" style="visibility:hidden;position:fixed;x:0;y:0"></canvas><br>
@@ -35,6 +38,8 @@
       <hr><hr>
       <div><div><canvas id="w0"></canvas><canvas id="w1"></canvas></div><div><canvas id="w2"></canvas><canvas id="w3"></canvas></div></div>
     </div>
+    <hr><hr><hr>
+    <div id="map"></div>
   </body>
   <script id="p30b1vtxboxes" type="notjs">#version 300 es
     in ivec2 p30b1;
@@ -244,5 +249,21 @@ void main() {
     setTimeout(() => render({x:1, y:0, z:1}, document.getElementById("w1")),0);
     setTimeout(() => render({x:0, y:1, z:1}, document.getElementById("w2")),0);
     setTimeout(() => render({x:1, y:1, z:1}, document.getElementById("w3")),0);
+    setTimeout(() => {
+      var map = L.map('map', {
+        center: [37.7619, -122.4369],
+        zoom: 13,
+        maxZoom: 22,
+        zoomSnap: 1,
+      });
+      var pointOverlay = L.GridLayer.extend({
+        createTile: function({x,y,z}) {
+          var t = L.DomUtil.create('canvas', 'pOver');
+          setTimeout(() => render({x,y,z}, t),0);
+          return t;
+        }
+      });
+      map.addLayer(new pointOverlay());
+    });
   </script>
 </html>
