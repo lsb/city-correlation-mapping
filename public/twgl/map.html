@@ -232,18 +232,18 @@ void main() {
       console.log({startTime, shadowTime, edgeTime, pointTime, finishTime, copyTime});
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
-    setTimeout(() => render({x:327, y:791, z:11}, document.getElementById("f2")),0);
-    setTimeout(() => render({x:603, y:769, z:11}, document.getElementById("f3")),0);
-    setTimeout(() => render({x:5, y:12, z:5}, document.getElementById("f4")),0);
-    setTimeout(() => render({x:0, y:0, z:0}, document.getElementById("f1")),0);
-    setTimeout(() => render({x:255, y:141, z:8}, document.getElementById("f5")),0);
-    setTimeout(() => render({x:0, y:141, z:8}, document.getElementById("f6")),0);
-    setTimeout(() => render({x:2095652, y:1394698, z:22}, document.getElementById("f22")),0);
+    requestAnimationFrame(() => render({x:327, y:791, z:11}, document.getElementById("f2")));
+    requestAnimationFrame(() => render({x:603, y:769, z:11}, document.getElementById("f3")));
+    requestAnimationFrame(() => render({x:5, y:12, z:5}, document.getElementById("f4")));
+    requestAnimationFrame(() => render({x:0, y:0, z:0}, document.getElementById("f1")));
+    requestAnimationFrame(() => render({x:255, y:141, z:8}, document.getElementById("f5")));
+    requestAnimationFrame(() => render({x:0, y:141, z:8}, document.getElementById("f6")));
+    requestAnimationFrame(() => render({x:2095652, y:1394698, z:22}, document.getElementById("f22")));
 
-    setTimeout(() => render({x:0, y:0, z:1}, document.getElementById("w0")),0);
-    setTimeout(() => render({x:1, y:0, z:1}, document.getElementById("w1")),0);
-    setTimeout(() => render({x:0, y:1, z:1}, document.getElementById("w2")),0);
-    setTimeout(() => render({x:1, y:1, z:1}, document.getElementById("w3")),0);
+    requestAnimationFrame(() => render({x:0, y:0, z:1}, document.getElementById("w0")));
+    requestAnimationFrame(() => render({x:1, y:0, z:1}, document.getElementById("w1")));
+    requestAnimationFrame(() => render({x:0, y:1, z:1}, document.getElementById("w2")));
+    requestAnimationFrame(() => render({x:1, y:1, z:1}, document.getElementById("w3")));
     setTimeout(() => {
       var map = L.map('map', {
         center: [37.7619, -122.4369],
@@ -254,7 +254,7 @@ void main() {
       var pointOverlay = L.GridLayer.extend({
         createTile: function({x,y,z}) {
           var t = L.DomUtil.create('canvas', 'pOver');
-          setTimeout(() => render({x,y,z}, t),0);
+          requestAnimationFrame(() => render({x,y,z}, t));
           return t;
         }
       });
