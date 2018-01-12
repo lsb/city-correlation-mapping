@@ -102,21 +102,16 @@ void main() {
       //outcolor = vec4(edgeR, edgeG, edgeB, 0.05); return;
       ivec2 currentPoint = ivec2((x << 8) + uint(gl_FragCoord.x), (y << 8) + uint(255) - uint(gl_FragCoord.y));
       vec4 edgeRel = vec4(srcdst - ivec4(currentPoint, currentPoint));
-      float baseEdgeOpacity = 1.0 - smoothstep(0.0, 1.0, smoothstep(edgeDecayPx, edgeDisappearPx, min(length(edgeRel.xy), length(edgeRel.zw))));
       vec4 sER = sign(edgeRel);
-      vec2 edgeProgress = smoothstep(0.0,1.0,smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5,0.5))));
-      vec2 mixedLatitude = mix(edgeRel.yy, edgeRel.ww, edgeProgress);
-      float minLat = (sign(mixedLatitude.x) != sign(mixedLatitude.y)) ? 0.0 : min(abs(mixedLatitude.x), abs(mixedLatitude.y));
-      float edgeOpacity = baseEdgeOpacity * (1.0 - smoothstep(0.5 * edgeWidth, edgeWidth, minLat));
-      if(sER.x == sER.z || sER.y == sER.w
-           || edgeDisappearPx < length(edgeRel.xy)
-           || edgeDisappearPx < length(edgeRel.zw)
-           || edgeOpacity == 0.0
-        ) {
-        discard;
-      } else {
-       outcolor = vec4(edgeR, edgeG, edgeB, edgeOpacity);
-      }
+      if(sER.x == sER.z || sER.y == sER.w) { discard; }
+      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5,0.5)));
+      vec2 mixedLatitudeMinMax = mix(edgeRel.yy, edgeRel.ww, edgeProgressMinMax);
+      float minLat = (sign(mixedLatitudeMinMax.x) != sign(mixedLatitudeMinMax.y)) ? 0.0 : min(abs(mixedLatitudeMinMax.x), abs(mixedLatitudeMinMax.y));
+      float edgeOpacityY = 1.0 - smoothstep(0.5 * edgeWidth, edgeWidth, minLat);
+      if(edgeOpacityY == 0.0) { discard; }
+      float edgeOpacityX = 1.0 - smoothstep(edgeDecayPx, edgeDisappearPx, min(length(edgeRel.xy), length(edgeRel.zw)));
+      if(edgeOpacityX == 0.0) { discard; }
+      outcolor = vec4(edgeR, edgeG, edgeB, edgeOpacityX * edgeOpacityY);
     }
   </script>
 
