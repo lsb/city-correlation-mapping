@@ -150,7 +150,7 @@ void main() {
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
     etc = new Int32Array(edgeS.length * 12); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da  sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
-    edgeS.forEach((s,i) => {
+    Array.from(edgeS).slice(0,10).forEach((s,i) => {
       const ei = i * 12;
       const d = edgeD[i];
       const sa = lat30m[s];
@@ -200,8 +200,8 @@ void main() {
         edgeR: 0.75,
         edgeG: 0.25,
         edgeB: 0.25,
-        edgeWidth: 0.5,
-        edgeDecayPx: 4, // maybe make this proportional to window size lol
+        edgeWidth: 3,
+        edgeDecayPx: 512, // maybe make this proportional to window size lol
         edgeDisappearPx: 1024,
         ...xyz
       };
@@ -249,6 +249,7 @@ void main() {
         center: [37.7619, -122.4369],
         zoom: 13,
         maxZoom: 22,
+        minZoom: 1,
         zoomSnap: 1,
       });
       var pointOverlay = L.GridLayer.extend({
