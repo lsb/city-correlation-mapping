@@ -104,7 +104,7 @@ void main() {
       vec4 edgeRel = vec4(srcdst - ivec4(currentPoint, currentPoint));
       vec4 sER = sign(edgeRel);
       if(sER.x == sER.z || sER.y == sER.w) { discard; }
-      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5,0.5)));
+      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5-edgeWidth,0.5+edgeWidth)));
       vec2 mixedLatitudeMinMax = mix(edgeRel.yy, edgeRel.ww, edgeProgressMinMax);
       float minLat = (sign(mixedLatitudeMinMax.x) != sign(mixedLatitudeMinMax.y)) ? 0.0 : min(abs(mixedLatitudeMinMax.x), abs(mixedLatitudeMinMax.y));
       float edgeOpacityY = 1.0 - smoothstep(0.5 * edgeWidth, edgeWidth, minLat);
