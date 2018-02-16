@@ -77,30 +77,33 @@ void main() {
   </script>
   <script id="edgeEveryTriangle" type="notjs">#version 300 es
     precision highp int;
+    precision highp float;
     in ivec4 edge;
-    flat out ivec4 srcdst;
+    out vec4 edgeRel;
     uniform uint x;
     uniform uint y;
     uniform uint z;
     uniform float edgeWidth;
     void main() {
       ivec4 unsortedsrcdst = abs(edge) >> (22 - int(z));
-      srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
+      ivec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
 
-      vec4 edgeRel = vec4(srcdst - (ivec4(x,y,x,y) << 8));
-      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5-edgeWidth, 0.5+edgeWidth+256.0)));
-      vec2 mixedLatitudeMinMax = mix(edgeRel.yy, edgeRel.ww, edgeProgressMinMax);
+      vec4 edgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) << 8));
+      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xx, edgeRelUR.zz, vec2(-0.5-edgeWidth, 0.5+edgeWidth+256.0)));
+      vec2 mixedLatitudeMinMax = mix(edgeRelUR.yy, edgeRelUR.ww, edgeProgressMinMax);
       vec2 latRange = mixedLatitudeMinMax.x < mixedLatitudeMinMax.y ? mixedLatitudeMinMax.xy : mixedLatitudeMinMax.yx;
-      vec2 lngRange = edgeRel.xz + vec2(-edgeWidth, edgeWidth);
+      vec2 lngRange = edgeRelUR.xz + vec2(-edgeWidth, edgeWidth);
       bool edgeInRange = lngRange[0] <= 256.0 && 0.0 <= lngRange[1] && latRange[0] <= 256.0 && 0.0 <= latRange[1];
 
       gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4((edge.y < 0) ? vec2(-1.0,-3.0) : (edge.x < 0 ? vec2(-1.0,3.0) : vec2(2.0,0.0)), 0.0, 1.0);
+
+      edgeRel = edgeRelUR - ((edge.y < 0) ? vec4(0.0, 512.0, 0.0, 512.0) : ((edge.x < 0) ? vec4(0.0, -256.0, 0.0, -256.0) : vec4(384.0, 128.0, 384.0, 128.0)));
     }
   </script>
   <script id="smoothThickEdge" type="notjs">#version 300 es
     precision highp float;
     precision highp int;
-    flat in ivec4 srcdst;
+    in vec4 edgeRel;
     uniform uint x;
     uniform uint y;
     uniform float edgeR;
@@ -112,8 +115,6 @@ void main() {
     out vec4 outcolor;
     void main() {
       //outcolor = vec4(edgeR, edgeG, edgeB, 0.05); return;
-      ivec2 currentPoint = ivec2((x << 8) + uint(gl_FragCoord.x), (y << 8) + uint(255) - uint(gl_FragCoord.y));
-      vec4 edgeRel = vec4(srcdst - ivec4(currentPoint, currentPoint));
       vec4 sER = sign(edgeRel);
       if(sER.x == sER.z || sER.y == sER.w) { discard; }
       vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5-edgeWidth,0.5+edgeWidth)));
