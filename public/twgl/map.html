@@ -114,7 +114,6 @@ void main() {
     uniform float edgeDisappearPx;
     out vec4 outcolor;
     void main() {
-      //outcolor = vec4(edgeR, edgeG, edgeB, 0.05); return;
       vec4 sER = sign(edgeRel);
       if(sER.x == sER.z || sER.y == sER.w) { discard; }
       vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5-edgeWidth,0.5+edgeWidth)));
