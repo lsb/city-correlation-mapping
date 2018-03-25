@@ -137,7 +137,9 @@ void main() {
     function lat2tile(lat,zoom) {
       return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
     }
+    function clamp(min, max, val) { return val < min ? min : (val > max ? max : val) }
     const maxPlaceId = places.slice(-1)[0][0] + 1;
+    const maxZ30 = (1 << 30) - 1;
     used = new Uint8Array(maxPlaceId);
     lat30m = new Uint32Array(maxPlaceId);
     lng30m = new Uint32Array(maxPlaceId);
@@ -148,8 +150,8 @@ void main() {
 
     places.forEach(function([id, lat, lng, title]) {
       used[id] = 1;
-      lat30m[id] = lat2tile((lat > 0) ? Math.min(max_lat_degree, lat) : Math.max(min_lat_degree, lat), 30);
-      lng30m[id] = lng2tile(lng,30);
+      lat30m[id] = clamp(1, maxZ30, lat2tile((lat > 0) ? Math.min(max_lat_degree, lat) : Math.max(min_lat_degree, lat), 30));
+      lng30m[id] = clamp(1, maxZ30, lng2tile(lng,30));
     });
   </script>
   <script>
