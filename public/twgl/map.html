@@ -120,6 +120,7 @@ void main() {
     uniform float edgeWidth;
     uniform float edgeDecayPx;
     uniform float edgeDisappearPx;
+    uniform float edgeMaxAlpha;
     out vec4 outcolor;
     void main() {
       vec4 sER = sign(edgeRel);
@@ -131,7 +132,7 @@ void main() {
       if(edgeOpacityY == 0.0) { discard; }
       float edgeOpacityX = 1.0 - smoothstep(edgeDecayPx, edgeDisappearPx, min(length(edgeRel.xy), length(edgeRel.zw)));
       if(edgeOpacityX == 0.0) { discard; }
-      outcolor = vec4(edgeR, edgeG, edgeB, edgeOpacityX * edgeOpacityY);
+      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * edgeOpacityX * edgeOpacityY);
     }
   </script>
 
@@ -222,6 +223,7 @@ void main() {
         edgeR: 0.75,
         edgeG: 0.25,
         edgeB: 0.25,
+        edgeMaxAlpha: 0.25,
         edgeWidth: 3,
         edgeDecayPx: 512, // maybe make this proportional to window size lol
         edgeDisappearPx: 1024,
