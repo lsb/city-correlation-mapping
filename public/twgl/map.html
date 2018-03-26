@@ -228,27 +228,35 @@ void main() {
         ...xyz
       };
 
+      if(!xyz.noShadow) {
       gl.useProgram(programInfo.program);
       twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
       twgl.setUniforms(programInfo, uniforms);
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
+      }
       const shadowTime = Date.now();
 
+      if(!xyz.noEdge) {
       gl.useProgram(tessedgeProgramInfo.program);
       twgl.setBuffersAndAttributes(gl, tessedgeProgramInfo, edgeBufferInfo);
-      var tesselations = 8;
-      for(var i = 0.000001; i < tesselations; i++) {
-        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: +i / tesselations, partialWidth: 1 / tesselations})});
+      var partialWidth = xyz.partialWidth || (1 / 32);
+      var partialStart = xyz.partialStart || 0.00001;
+      var stripeCount = xyz.stripeCount || (1 / partialWidth);
+      for(; partialStart < 1 && stripeCount > 0; stripeCount--, partialStart += partialWidth) {
+        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: +partialStart, partialWidth })});
         twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
-        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: -i / tesselations, partialWIdth: 1 / tesselations})});
+        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: -partialStart, partialWidth })});
         twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
+      }
       }
       const edgeTime = Date.now();
 
+      if(!xyz.noPoint) {
       gl.useProgram(programInfo.program);
       twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
       twgl.setUniforms(programInfo, {...uniforms, ...({rad: 1.5, r: 0, g: 0, b: 0})});
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
+      }
       const pointTime = Date.now();
       gl.finish();
       const finishTime = Date.now();
@@ -279,15 +287,32 @@ void main() {
         minZoom: 1,
         zoomSnap: 1,
       });
+      var shadowOverlay = L.GridLayer.extend({
+        createTile: function({x,y,z}) {
+          var t = L.DomUtil.create('canvas', 'pOver');
+          requestAnimationFrame(() => render({x,y,z, noPoint: true, noEdge: true}, t));
+          return t;
+        }
+      });
+      var edgeOverlayShardCount = 8;
+      var edgeOverlays = [...Array(edgeOverlayShardCount)].map((e,i) => L.GridLayer.extend({
+        createTile: function({x,y,z}) {
+          var t = L.DomUtil.create('canvas', 'pOver');
+          setTimeout(() => requestAnimationFrame(() => render({x,y,z, noPoint: true, noShadow: true, partialStart : 0.00001 + (i / edgeOverlayShardCount), partialWidth: 1/edgeOverlayShardCount, stripeCount: 1}, t)),0);
+          return t;
+        }
+      }));
       var pointOverlay = L.GridLayer.extend({
         createTile: function({x,y,z}) {
           var t = L.DomUtil.create('canvas', 'pOver');
-          requestAnimationFrame(() => render({x,y,z}, t));
+          requestAnimationFrame(() => render({x,y,z, noEdge: true, noShadow: true}, t));
           return t;
         }
       });
       var yellowboxnumbers = L.GridLayer.extend({createTile: function(coords) { var t = document.createElement('canvas'); var size = this.getTileSize(); t.width = size.x ; t.height = size.y; var ctx = t.getContext('2d'); ctx.font = '0.25in monospace'; setTimeout(() => { ctx.beginPath(); ctx.fillStyle=`rgba(255,255,${0 + Math.floor(Math.random() * 255)},255)`; ctx.rect(0,0,size.x,size.y); ctx.fill();ctx.fillStyle=`black`;ctx.fillText(JSON.stringify([coords.x, coords.y, coords.z]),0,20);},0); return t; }});
       map.addLayer(new yellowboxnumbers());
+      map.addLayer(new shadowOverlay());
+      edgeOverlays.forEach(e => map.addLayer(new e()));
       map.addLayer(new pointOverlay());
     });
   </script>
