@@ -172,7 +172,7 @@ void main() {
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
     etc = new Int32Array(edgeS.length * 12); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da  sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
-    Array.from(edgeS).slice(0,10).forEach((s,i) => {
+    Array.from(edgeS).slice(0,1000000).forEach((s,i) => {
       const ei = i * 12;
       const d = edgeD[i];
       const sa = lat30m[s];
