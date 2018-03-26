@@ -264,7 +264,7 @@ void main() {
       destinationCanvas.height = gl.canvas.height;
       destinationCanvas.getContext("2d").drawImage(gl.canvas,0,0,gl.canvas.width,gl.canvas.height);
       const copyTime = Date.now();
-      console.log({startTime, shadowTime, edgeTime, pointTime, finishTime, copyTime});
+      //console.log({startTime, shadowTime, edgeTime, pointTime, finishTime, copyTime});
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
     requestAnimationFrame(() => render({x:327, y:791, z:11}, document.getElementById("f2")));
