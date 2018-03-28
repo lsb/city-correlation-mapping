@@ -86,6 +86,7 @@ void main() {
     uniform float edgeWidth;
     uniform float partialStart;
     uniform float partialWidth;
+    uniform float edgeWorldWidthWrap;
     void main() {
       ivec4 unsortedsrcdst = abs(edge) >> (22 - int(z));
       ivec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
@@ -94,12 +95,10 @@ void main() {
       float tileEdgeWidth = partialWidth * 256.0;
       float tileEdgeEnd   = tileEdgeStart + tileEdgeWidth;
 
-      vec4 edgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) << 8));
-      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xx, edgeRelUR.zz, vec2(-0.5-edgeWidth + tileEdgeStart, 0.5+edgeWidth+ tileEdgeEnd)));
-      vec2 mixedLatitudeMinMax = mix(edgeRelUR.yy, edgeRelUR.ww, edgeProgressMinMax);
-      vec2 latRange = (mixedLatitudeMinMax.x < mixedLatitudeMinMax.y ? mixedLatitudeMinMax.xy : mixedLatitudeMinMax.yx) + vec2(-edgeWidth, +edgeWidth);
-      vec2 lngRange = edgeRelUR.xz + vec2(-edgeWidth, edgeWidth);
-      bool edgeInRange = lngRange[0] <= tileEdgeEnd && tileEdgeStart <= lngRange[1] && latRange[0] <= 256.0 && 0.0 <= latRange[1];
+      vec4 unwrappedEdgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) << 8));
+      bool notToBeWrapped = float(srcdst.z - srcdst.x) < (edgeWorldWidthWrap * pow(2.0, float(z)+8.0));
+      bool srcCloserThanDst = abs(unwrappedEdgeRelUR.z - tileEdgeStart - tileEdgeWidth / 2.0) > abs(unwrappedEdgeRelUR.x - tileEdgeStart - tileEdgeWidth / 2.0);
+      vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-pow(2.0, float(z) + 8.0),0,0,0) : vec4(0,0,pow(2.0, float(z) + 8.0),0)));
 
       vec4 lrulfrag = vec4(latRange, tileEdgeStart, tileEdgeEnd);
       gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.y < 0) ? ((partialStart < 0.0) ? lrulfrag.zx : lrulfrag.wy) : (edge.x < 0 ? lrulfrag.wx : lrulfrag.zy)) * vec2(1.0 / 128.0, -1.0 / 128.0) ) + vec2(-1.0, 1.0), 0.0, 1.0);
@@ -227,6 +226,7 @@ void main() {
         edgeWidth: 3,
         edgeDecayPx: 512, // maybe make this proportional to window size lol
         edgeDisappearPx: 1024,
+        edgeWorldWidthWrap: 0.60,
         ...xyz
       };
 
