@@ -223,7 +223,7 @@ void main() {
         edgeR: 0.75,
         edgeG: 0.25,
         edgeB: 0.25,
-        edgeMaxAlpha: 0.25,
+        edgeMaxAlpha: 0.05,
         edgeWidth: 3,
         edgeDecayPx: 512, // maybe make this proportional to window size lol
         edgeDisappearPx: 1024,
@@ -296,11 +296,12 @@ void main() {
           return t;
         }
       });
-      var edgeOverlayShardCount = 8;
+      var edgeOverlayShardCount = 2;
+      var repeatShardCount = 8;
       var edgeOverlays = [...Array(edgeOverlayShardCount)].map((e,i) => L.GridLayer.extend({
         createTile: function({x,y,z}) {
           var t = L.DomUtil.create('canvas', 'pOver');
-          setTimeout(() => requestAnimationFrame(() => render({x,y,z, noPoint: true, noShadow: true, partialStart : 0.00001 + (i / edgeOverlayShardCount), partialWidth: 1/edgeOverlayShardCount, stripeCount: 1}, t)),0);
+          setTimeout(() => requestAnimationFrame(() => render({x,y,z, noPoint: true, noShadow: true, partialStart : 0.00001 + (i / edgeOverlayShardCount), partialWidth: (1/repeatShardCount)/edgeOverlayShardCount, stripeCount: repeatShardCount}, t)),0);
           return t;
         }
       }));
