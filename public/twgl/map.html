@@ -79,7 +79,7 @@ void main() {
     precision highp int;
     precision highp float;
     in ivec4 edge;
-    out vec4 edgeRel;
+    out float edgeA;
     uniform uint x;
     uniform uint y;
     uniform uint z;
@@ -100,17 +100,27 @@ void main() {
       bool srcCloserThanDst = abs(unwrappedEdgeRelUR.z - tileEdgeStart - tileEdgeWidth / 2.0) > abs(unwrappedEdgeRelUR.x - tileEdgeStart - tileEdgeWidth / 2.0);
       vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-pow(2.0, float(z) + 8.0),0,0,0) : vec4(0,0,pow(2.0, float(z) + 8.0),0)));
 
-      vec4 lrulfrag = vec4(latRange, tileEdgeStart, tileEdgeEnd);
-      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.y < 0) ? ((partialStart < 0.0) ? lrulfrag.zx : lrulfrag.wy) : (edge.x < 0 ? lrulfrag.wx : lrulfrag.zy)) * vec2(1.0 / 128.0, -1.0 / 128.0) ) + vec2(-1.0, 1.0), 0.0, 1.0);
+      vec2 edgeProgress = smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xx, edgeRelUR.zz, vec2(tileEdgeStart, tileEdgeEnd)));
+      vec2 latProgress = mix(edgeRelUR.yy, edgeRelUR.ww, edgeProgress);
+      bool edgeInRange = edgeRelUR.x <= tileEdgeEnd && tileEdgeStart <= edgeRelUR.z;
 
-      edgeRel = edgeRelUR - ((edge.y < 0) ? ((partialStart < 0.0) ? lrulfrag.zxzx : lrulfrag.wywy) : (edge.x < 0 ? lrulfrag.wxwx : lrulfrag.zyzy));
+      float triStart = max(tileEdgeStart, edgeRelUR.x);
+      float triEnd = min(tileEdgeEnd, edgeRelUR.z);
+      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.y < 0) ? ((partialStart < 0.0) ? vec2(triStart, latProgress[0] - edgeWidth) :
+                                                                                                             vec2(triEnd, latProgress[1] + edgeWidth)) :
+                                                                                     ((edge.x < 0) ?         vec2(triEnd, latProgress[1] - edgeWidth) :
+                                                                                                             vec2(triStart, latProgress[0] + edgeWidth)))
+                                                                     * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
+
+
+      edgeA = (edge.y < 0) ? ((partialStart < 0.0) ? -1.0 : 1.0) : ((edge.x < 0) ? -1.0 : 1.0);
 
     }
   </script>
   <script id="smoothThickEdge" type="notjs">#version 300 es
     precision highp float;
     precision highp int;
-    in vec4 edgeRel;
+    in float edgeA;
     uniform uint x;
     uniform uint y;
     uniform float edgeR;
@@ -122,16 +132,7 @@ void main() {
     uniform float edgeMaxAlpha;
     out vec4 outcolor;
     void main() {
-      vec4 sER = sign(edgeRel);
-      if(sER.x == sER.z || sER.y == sER.w) { discard; }
-      vec2 edgeProgressMinMax = smoothstep(0.0, 1.0, smoothstep(edgeRel.xx, edgeRel.zz, vec2(-0.5-edgeWidth,0.5+edgeWidth)));
-      vec2 mixedLatitudeMinMax = mix(edgeRel.yy, edgeRel.ww, edgeProgressMinMax);
-      float minLat = (sign(mixedLatitudeMinMax.x) != sign(mixedLatitudeMinMax.y)) ? 0.0 : min(abs(mixedLatitudeMinMax.x), abs(mixedLatitudeMinMax.y));
-      float edgeOpacityY = 1.0 - smoothstep(0.5 * edgeWidth, edgeWidth, minLat);
-      if(edgeOpacityY == 0.0) { discard; }
-      float edgeOpacityX = 1.0 - smoothstep(edgeDecayPx, edgeDisappearPx, min(length(edgeRel.xy), length(edgeRel.zw)));
-      if(edgeOpacityX == 0.0) { discard; }
-      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * edgeOpacityX * edgeOpacityY);
+      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * (1.0 - smoothstep(0.0, 1.0, smoothstep(0.0, 1.0, edgeA * edgeA))));
     }
   </script>
 
