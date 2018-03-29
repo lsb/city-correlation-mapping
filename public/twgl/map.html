@@ -231,9 +231,9 @@ void main() {
         edgeG: 0.25,
         edgeB: 0.25,
         edgeMaxAlpha: 0.05,
-        edgeWidth: 3,
+        edgeWidth: 5,
         edgeDecayPx: 512, // maybe make this proportional to window size lol
-        edgeDisappearPx: 1024,
+        edgeDisappearPx: 4096,
         edgeWorldWidthWrap: 0.60,
         ...xyz
       };
@@ -319,7 +319,7 @@ void main() {
         }
       });
       var yellowboxnumbers = L.GridLayer.extend({createTile: function(coords) { var t = document.createElement('canvas'); var size = this.getTileSize(); t.width = size.x ; t.height = size.y; var ctx = t.getContext('2d'); ctx.font = '0.25in monospace'; setTimeout(() => { ctx.beginPath(); ctx.fillStyle=`rgba(255,255,${0 + Math.floor(Math.random() * 255)},255)`; ctx.rect(0,0,size.x,size.y); ctx.fill();ctx.fillStyle=`black`;ctx.fillText(JSON.stringify([coords.x, coords.y, coords.z]),0,20);},0); return t; }});
-      map.addLayer(new yellowboxnumbers());
+      //map.addLayer(new yellowboxnumbers());
       map.addLayer(new shadowOverlay());
       edgeOverlays.forEach(e => map.addLayer(new e()));
       map.addLayer(new pointOverlay());
