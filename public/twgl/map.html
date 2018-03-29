@@ -80,10 +80,13 @@ void main() {
     precision highp float;
     in ivec4 edge;
     out float edgeA;
+    out float edgeAFade;
     uniform uint x;
     uniform uint y;
     uniform uint z;
     uniform float edgeWidth;
+    uniform float edgeDecayPx;
+    uniform float edgeDisappearPx;
     uniform float partialStart;
     uniform float partialWidth;
     uniform float edgeWorldWidthWrap;
@@ -91,7 +94,7 @@ void main() {
       ivec4 unsortedsrcdst = abs(edge) >> (22 - int(z));
       ivec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
 
-      float tileEdgeStart = abs(partialStart) * 256.0;
+      float tileEdgeStart = partialStart * 256.0;
       float tileEdgeWidth = partialWidth * 256.0;
       float tileEdgeEnd   = tileEdgeStart + tileEdgeWidth;
 
@@ -100,39 +103,41 @@ void main() {
       bool srcCloserThanDst = abs(unwrappedEdgeRelUR.z - tileEdgeStart - tileEdgeWidth / 2.0) > abs(unwrappedEdgeRelUR.x - tileEdgeStart - tileEdgeWidth / 2.0);
       vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-pow(2.0, float(z) + 8.0),0,0,0) : vec4(0,0,pow(2.0, float(z) + 8.0),0)));
 
-      vec2 edgeProgress = smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xx, edgeRelUR.zz, vec2(tileEdgeStart, tileEdgeEnd)));
-      vec2 latProgress = mix(edgeRelUR.yy, edgeRelUR.ww, edgeProgress);
-      bool edgeInRange = edgeRelUR.x <= tileEdgeEnd && tileEdgeStart <= edgeRelUR.z;
-
       float triStart = max(tileEdgeStart, edgeRelUR.x);
       float triEnd = min(tileEdgeEnd, edgeRelUR.z);
-      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.y < 0) ? ((partialStart < 0.0) ? vec2(triStart, latProgress[0] - edgeWidth) :
-                                                                                                             vec2(triEnd, latProgress[1] + edgeWidth)) :
-                                                                                     ((edge.x < 0) ?         vec2(triEnd, latProgress[1] - edgeWidth) :
-                                                                                                             vec2(triStart, latProgress[0] + edgeWidth)))
+
+      vec2 triBounds = vec2(triStart, triEnd);
+
+      vec2 edgeProgress = smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xx, edgeRelUR.zz, triBounds));
+      vec2 latProgress = mix(edgeRelUR.yy, edgeRelUR.ww, edgeProgress);
+      vec4 slopeProgress = mix(edgeRelUR.yyyy, edgeRelUR.wwww, smoothstep(0.0, 1.0, smoothstep(edgeRelUR.xxxx, edgeRelUR.zzzz, vec4(triStart - 0.5, triStart + 0.5, triEnd - 0.5, triEnd + 0.5))));
+      vec4 edgeWidthBothSides = smoothstep(0.0, 1.0, smoothstep(edgeDecayPx, edgeDisappearPx, abs(edgeRelUR.xzxz - triBounds.xxyy)));
+      vec2 edgeWidthProgress = 1.0 - min(edgeWidthBothSides.xz, edgeWidthBothSides.yw);
+
+
+      bool edgeInRange = edgeRelUR.x <= tileEdgeEnd && tileEdgeStart <= edgeRelUR.z && length(edgeWidthProgress) > 0.0;
+
+      vec3 zcross = vec3(0,0,sign(edge.y)) * edgeWidth;
+      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.x > 0) ? (vec2(triEnd, latProgress[1])   + vec2(cross(normalize(vec3(1.0,slopeProgress[3]-slopeProgress[2],0.0)),zcross * edgeWidthProgress[1]))) :
+                                                                                     (vec2(triStart, latProgress[0]) + vec2(cross(normalize(vec3(1.0,slopeProgress[1]-slopeProgress[0],0.0)),zcross * edgeWidthProgress[0]))))
                                                                      * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
 
 
-      edgeA = (edge.y < 0) ? ((partialStart < 0.0) ? -1.0 : 1.0) : ((edge.x < 0) ? -1.0 : 1.0);
-
+      edgeA = (edge.y > 0) ? -1.0 : 1.0;
+      edgeAFade = (edge.x > 0) ? edgeWidthProgress[1] : edgeWidthProgress[0];
     }
   </script>
   <script id="smoothThickEdge" type="notjs">#version 300 es
-    precision highp float;
-    precision highp int;
+    precision lowp float;
     in float edgeA;
-    uniform uint x;
-    uniform uint y;
+    in float edgeAFade;
     uniform float edgeR;
     uniform float edgeG;
     uniform float edgeB;
-    uniform float edgeWidth;
-    uniform float edgeDecayPx;
-    uniform float edgeDisappearPx;
     uniform float edgeMaxAlpha;
     out vec4 outcolor;
     void main() {
-      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * (1.0 - smoothstep(0.0, 1.0, smoothstep(0.0, 1.0, edgeA * edgeA))));
+      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * edgeAFade * (1.0 - smoothstep(0.9,1.0, abs(edgeA))));
     }
   </script>
 
@@ -172,20 +177,22 @@ void main() {
       ptc[i*12+1] = ptc[i*12+3] = ptc[i*12+5] = ptc[i*12+7] = ptc[i*12+9] = ptc[i*12+11] = lat;
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
-    etc = new Int32Array(edgeS.length * 12); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da  sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
+    //edgeS[0] = 268951; edgeD[0] = 2138;
+    etc = new Int32Array(edgeS.length * 24); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da / sn- sa+ dn da sn+ sa- dn da sn- sa- dn da // sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
+    //etc = new Int32Array(5 * 24);
     Array.from(edgeS).slice(0,1000000).forEach((s,i) => {
-      const ei = i * 12;
+      const ei = i * 24;
       const d = edgeD[i];
       const sa = lat30m[s];
       const sn = lng30m[s];
       const da = lat30m[d];
       const dn = lng30m[d];
-      etc[ei+0] = etc[ei+4] = etc[ei+8] = sn;
-      etc[ei+1] = etc[ei+5] = etc[ei+9] = sa;
-      etc[ei+2] = etc[ei+6] = etc[ei+10] = dn;
-      etc[ei+3] = etc[ei+7] = etc[ei+11] = da;
-      etc[ei+0] = -sn;
-      etc[ei+9] = -sa;
+      etc[ei+00] = etc[ei+04] = etc[ei+08] = etc[ei+12] = etc[ei+16] = etc[ei+20] = sn;
+      etc[ei+01] = etc[ei+05] = etc[ei+09] = etc[ei+13] = etc[ei+17] = etc[ei+21] = sa;
+      etc[ei+02] = etc[ei+06] = etc[ei+10] = etc[ei+14] = etc[ei+18] = etc[ei+22] = dn;
+      etc[ei+03] = etc[ei+07] = etc[ei+11] = etc[ei+15] = etc[ei+19] = etc[ei+23] = da;
+      etc[ei+00] = etc[ei+12] = etc[ei+20] = -sn;
+      etc[ei+09] = etc[ei+17] = etc[ei+21] = -sa;
     });
   </script>
   <script>
@@ -246,9 +253,7 @@ void main() {
       var partialStart = xyz.partialStart || 0.00001;
       var stripeCount = xyz.stripeCount || (1 / partialWidth);
       for(; partialStart < 1 && stripeCount > 0; stripeCount--, partialStart += partialWidth) {
-        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: +partialStart, partialWidth })});
-        twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
-        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart: -partialStart, partialWidth })});
+        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart, partialWidth })});
         twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
       }
       }
@@ -297,12 +302,12 @@ void main() {
           return t;
         }
       });
-      var edgeOverlayShardCount = 2;
+      var edgeOverlayShardCount = 1;
       var repeatShardCount = 8;
       var edgeOverlays = [...Array(edgeOverlayShardCount)].map((e,i) => L.GridLayer.extend({
         createTile: function({x,y,z}) {
           var t = L.DomUtil.create('canvas', 'pOver');
-          setTimeout(() => requestAnimationFrame(() => render({x,y,z, noPoint: true, noShadow: true, partialStart : 0.00001 + (i / edgeOverlayShardCount), partialWidth: (1/repeatShardCount)/edgeOverlayShardCount, stripeCount: repeatShardCount}, t)),0);
+          setTimeout(() => requestAnimationFrame(() => render({x,y,z, noPoint: true, noShadow: true, partialStart : ((i - 0.5/repeatShardCount) / edgeOverlayShardCount), partialWidth: (1/repeatShardCount)/edgeOverlayShardCount, stripeCount: repeatShardCount+1}, t)), 0);
           return t;
         }
       }));
