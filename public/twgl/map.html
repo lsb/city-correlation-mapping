@@ -58,20 +58,19 @@
     }
   </script>
   <script id="fs" type="notjs">#version 300 es
-precision highp float;
+precision lowp float;
 uniform float r;
 uniform float g;
 uniform float b;
-uniform float rad;
 in vec2 frag_pos;
 out vec4 outColor;
 
 void main() {
-  float color = 1.0 - smoothstep(0.25/rad, 0.0, 1.0 - length(frag_pos));
-  if(color == 0.0) {
+  float alpha = 1.0 - smoothstep(0.75, 1.0, length(frag_pos));
+  if(alpha == 0.0) {
     discard;
   } else {
-    outColor = vec4( r, g, b, color);
+    outColor = vec4( r, g, b, alpha);
   }
 }
   </script>
