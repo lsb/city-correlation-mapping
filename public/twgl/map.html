@@ -301,7 +301,7 @@ void main() {
           return t;
         }
       });
-      var tessellationCount = 8;
+      var tessellationCount = 32;
       var edgeOverlay = L.GridLayer.extend({
         createTile: function({x,y,z}) {
           var t = L.DomUtil.create('canvas', 'pOver');
