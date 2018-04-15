@@ -41,7 +41,7 @@
     <hr><hr><hr>
     <div id="map"></div>
   </body>
-  <script id="p30b1vtxboxes" type="notjs">#version 300 es
+  <script id="pointBoundingBoxes" type="notjs">#version 300 es
     in ivec2 p30b1;
     out vec2 frag_pos;
     uniform uint x;
@@ -57,7 +57,7 @@
       gl_Position = vec4((vec2(pGlobal) + frag_pos * rad)/128.0 * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0.0, 1.0);
     }
   </script>
-  <script id="fs" type="notjs">#version 300 es
+  <script id="roundPointColors" type="notjs">#version 300 es
 precision lowp float;
 uniform float r;
 uniform float g;
@@ -74,7 +74,7 @@ void main() {
   }
 }
   </script>
-  <script id="partialEdgeTriangle" type="notjs">#version 300 es
+  <script id="smoothstepPolylineSegment" type="notjs">#version 300 es
     precision highp int;
     precision highp float;
     in ivec4 edge;
@@ -126,7 +126,7 @@ void main() {
       edgeAFade = (edge.x > 0) ? edgeWidthProgress[1] : edgeWidthProgress[0];
     }
   </script>
-  <script id="smoothThickEdge" type="notjs">#version 300 es
+  <script id="lineSegmentColor" type="notjs">#version 300 es
     precision lowp float;
     in float edgeA;
     in float edgeAFade;
@@ -201,8 +201,8 @@ void main() {
     gl.enable( gl.BLEND );
     gl.blendFuncSeparate( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA );
 
-    const programInfo = twgl.createProgramInfo(gl, ["p30b1vtxboxes", "fs"]);
-    const tessedgeProgramInfo = twgl.createProgramInfo(gl, ["partialEdgeTriangle", "smoothThickEdge"])
+    const pointProgramInfo = twgl.createProgramInfo(gl, ["pointBoundingBoxes", "roundPointColors"]);
+    const polylineProgramInfo = twgl.createProgramInfo(gl, ["smoothstepPolylineSegment", "lineSegmentColor"])
     const arrays = {
       p30b1: {numComponents: 2, data: ptc}
     };
@@ -238,30 +238,30 @@ void main() {
       };
 
       if(!xyz.noShadow) {
-      gl.useProgram(programInfo.program);
-      twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
-      twgl.setUniforms(programInfo, uniforms);
+      gl.useProgram(pointProgramInfo.program);
+      twgl.setBuffersAndAttributes(gl, pointProgramInfo, bufferInfo);
+      twgl.setUniforms(pointProgramInfo, uniforms);
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
       }
       const shadowTime = Date.now();
 
       if(!xyz.noEdge) {
-      gl.useProgram(tessedgeProgramInfo.program);
-      twgl.setBuffersAndAttributes(gl, tessedgeProgramInfo, edgeBufferInfo);
+      gl.useProgram(polylineProgramInfo.program);
+      twgl.setBuffersAndAttributes(gl, polylineProgramInfo, edgeBufferInfo);
       var partialWidth = xyz.partialWidth || (1 / 32);
       var partialStart = xyz.partialStart || 0.00001;
       var stripeCount = xyz.stripeCount || (1 / partialWidth);
       for(; partialStart < 1 && stripeCount > 0; stripeCount--, partialStart += partialWidth) {
-        twgl.setUniforms(tessedgeProgramInfo, {...uniforms, ...({ partialStart, partialWidth })});
+        twgl.setUniforms(polylineProgramInfo, {...uniforms, ...({ partialStart, partialWidth })});
         twgl.drawBufferInfo(gl, edgeBufferInfo, gl.TRIANGLES);
       }
       }
       const edgeTime = Date.now();
 
       if(!xyz.noPoint) {
-      gl.useProgram(programInfo.program);
-      twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
-      twgl.setUniforms(programInfo, {...uniforms, ...({rad: 1.5, r: 0, g: 0, b: 0})});
+      gl.useProgram(pointProgramInfo.program);
+      twgl.setBuffersAndAttributes(gl, pointProgramInfo, bufferInfo);
+      twgl.setUniforms(pointProgramInfo, {...uniforms, ...({rad: 1.5, r: 0, g: 0, b: 0})});
       twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLES);
       }
       const pointTime = Date.now();
