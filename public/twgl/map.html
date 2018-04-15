@@ -54,7 +54,7 @@
       int irad = int(rad+1.0);
       pGlobal.x += (1 << (int(z)+8)) * ((pGlobal.x > (256 + irad)) ? -1 : ((-irad > pGlobal.x) ? 1 : 0));
 
-      gl_Position = vec4((vec2(pGlobal) + frag_pos * rad)/128.0 * vec2(1.0,-1.0) - vec2(1.0,-1.0), 0.0, 1.0);
+      gl_Position = vec4(((vec2(pGlobal) + frag_pos * rad) * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
     }
   </script>
   <script id="roundPointColors" type="notjs">#version 300 es
