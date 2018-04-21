@@ -307,7 +307,7 @@ void main() {
           var t = L.DomUtil.create('canvas', 'pOver');
           setTimeout(() =>
             requestAnimationFrame(() =>
-              render({x,y,z, noPoint: true, noShadow: true,
+              render({x,y,z,
                       partialStart : (-0.5/tessellationCount),
                       partialWidth: 1/tessellationCount,
                       stripeCount: tessellationCount+1}, t)), 0);
@@ -332,9 +332,7 @@ void main() {
           return t;
       }});
       map.addLayer(new whiteTiles());
-      map.addLayer(new shadowOverlay());
       map.addLayer(new edgeOverlay());
-      map.addLayer(new pointOverlay());
     });
   </script>
 </html>
