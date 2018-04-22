@@ -50,9 +50,11 @@
     uniform float rad;
     void main() {
       frag_pos = vec2(sign(p30b1));
-      ivec2 pGlobal = ((abs(p30b1) >> (22 - int(z))) - (ivec2(x,y) << 8));
+      int modelscaledown = int(exp2(22.0 - float(z)));
+      int viewwidth = 1073741824 / modelscaledown;
+      ivec2 pGlobal = (abs(p30b1) / modelscaledown) - (ivec2(x,y) * 256);
       int irad = int(rad+1.0);
-      pGlobal.x += (1 << (int(z)+8)) * ((pGlobal.x > (256 + irad)) ? -1 : ((-irad > pGlobal.x) ? 1 : 0));
+      pGlobal.x += viewwidth * ((pGlobal.x > (256 + irad)) ? -1 : ((-irad > pGlobal.x) ? 1 : 0));
 
       gl_Position = vec4(((vec2(pGlobal) + frag_pos * rad) * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
     }
@@ -90,17 +92,19 @@ void main() {
     uniform float partialWidth;
     uniform float edgeWorldWidthWrap;
     void main() {
-      ivec4 unsortedsrcdst = abs(edge) >> (22 - int(z));
+      int modelscaledown = int(exp2(22.0 - float(z)));
+      int viewwidth = 1073741824 / modelscaledown;
+      ivec4 unsortedsrcdst = abs(edge) / modelscaledown;
       ivec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
 
       float tileEdgeStart = partialStart * 256.0;
       float tileEdgeWidth = partialWidth * 256.0;
       float tileEdgeEnd   = tileEdgeStart + tileEdgeWidth;
 
-      vec4 unwrappedEdgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) << 8));
-      bool notToBeWrapped = float(srcdst.z - srcdst.x) < (edgeWorldWidthWrap * pow(2.0, float(z)+8.0));
+      vec4 unwrappedEdgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) * 256));
+      bool notToBeWrapped = float(srcdst.z - srcdst.x) < (edgeWorldWidthWrap * float(viewwidth));
       bool srcCloserThanDst = abs(unwrappedEdgeRelUR.z - tileEdgeStart - tileEdgeWidth / 2.0) > abs(unwrappedEdgeRelUR.x - tileEdgeStart - tileEdgeWidth / 2.0);
-      vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-pow(2.0, float(z) + 8.0),0,0,0) : vec4(0,0,pow(2.0, float(z) + 8.0),0)));
+      vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-viewwidth,0,0,0) : vec4(0,0,viewwidth,0)));
 
       float triStart = max(tileEdgeStart, edgeRelUR.x);
       float triEnd = min(tileEdgeEnd, edgeRelUR.z);
