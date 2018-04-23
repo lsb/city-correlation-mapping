@@ -18,6 +18,12 @@
         text-align: center;
         z-index: 2;
       }
+      img.c {
+        display: inline-block;
+        width: 256px;
+        height: 256px;
+        margin: auto;
+      }
     </style>
     <link rel="stylesheet" href="leaflet.css"/>
     <script src="leaflet.js"></script>
@@ -28,15 +34,15 @@
     <div id="b">hi lol</div>
     <div>
       here is some text lol
-      <canvas id="f1"></canvas>
-      <canvas id="f2"></canvas>
-      <canvas id="f3"></canvas>
-      <canvas id="f4"></canvas><hr>
-      <canvas id="f5"></canvas><canvas id="f6"></canvas>
+      <img class=c id="f1"></img>
+      <img class=c id="f2"></img>
+      <img class=c id="f3"></img>
+      <img class=c id="f4"></img><hr>
+      <img class=c id="f5"></img><img class=c id="f6"></img>
       <hr>
-      <canvas id="f22"></canvas>
+      <img class=c id="f22"></img>
       <hr><hr>
-      <div><div><canvas id="w0"></canvas><canvas id="w1"></canvas></div><div><canvas id="w2"></canvas><canvas id="w3"></canvas></div></div>
+      <div><div><img class=c id="w0"></img><img class=c id="w1"></img></div><div><img class=c id="w2"></img><img class=c id="w3"></img></div></div>
     </div>
     <hr><hr><hr>
     <div id="map"></div>
@@ -198,7 +204,7 @@ void main() {
   <script>
     "use strict";
     console.log('hi lol');
-    const gl = document.querySelector("#c").getContext("webgl");
+    const gl = document.querySelector("#c").getContext("webgl", {preserveDrawingBuffer: true});
     gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable( gl.BLEND );
@@ -270,9 +276,7 @@ void main() {
       const pointTime = Date.now();
       gl.finish();
       const finishTime = Date.now();
-      destinationCanvas.width = gl.canvas.width;
-      destinationCanvas.height = gl.canvas.height;
-      destinationCanvas.getContext("2d").drawImage(gl.canvas,0,0,gl.canvas.width,gl.canvas.height);
+      destinationCanvas.src = gl.canvas.toDataURL();
       const copyTime = Date.now();
       //console.log({startTime, shadowTime, edgeTime, pointTime, finishTime, copyTime});
       gl.clear(gl.COLOR_BUFFER_BIT);
@@ -307,7 +311,7 @@ void main() {
       var tessellationCount = 32;
       var edgeOverlay = L.GridLayer.extend({
         createTile: function({x,y,z}) {
-          var t = L.DomUtil.create('canvas', 'pOver');
+          var t = new Image(); //L.DomUtil.create('canvas', 'pOver');
           setTimeout(() =>
             requestAnimationFrame(() =>
               render({x,y,z,
