@@ -41,50 +41,48 @@
     <hr><hr><hr>
     <div id="map"></div>
   </body>
-  <script id="pointBoundingBoxes" type="notjs">#version 300 es
-    in ivec2 p30b1;
-    out vec2 frag_pos;
-    uniform uint x;
-    uniform uint y;
-    uniform uint z;
+  <script id="pointBoundingBoxes" type="notjs">
+    precision highp float;
+    attribute vec2 points;
+    varying vec2 frag_pos;
+    uniform float x;
+    uniform float y;
+    uniform float z;
     uniform float rad;
     void main() {
-      frag_pos = vec2(sign(p30b1));
-      int modelscaledown = int(exp2(22.0 - float(z)));
-      int viewwidth = 1073741824 / modelscaledown;
-      ivec2 pGlobal = (abs(p30b1) / modelscaledown) - (ivec2(x,y) * 256);
-      int irad = int(rad+1.0);
-      pGlobal.x += viewwidth * ((pGlobal.x > (256 + irad)) ? -1 : ((-irad > pGlobal.x) ? 1 : 0));
+      frag_pos = vec2(sign(points));
+      float modelscaledown = exp2(22.0 - z);
+      float viewwidth = 1073741824.0 / modelscaledown;
+      vec2 pGlobal = (abs(points) / modelscaledown) - (vec2(x,y) * 256.0);
+      pGlobal.x += viewwidth * ((pGlobal.x > (256.0 + rad)) ? -1.0 : ((-rad > pGlobal.x) ? 1.0 : 0.0));
 
       gl_Position = vec4(((vec2(pGlobal) + frag_pos * rad) * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
     }
   </script>
-  <script id="roundPointColors" type="notjs">#version 300 es
+  <script id="roundPointColors" type="notjs">
 precision lowp float;
 uniform float r;
 uniform float g;
 uniform float b;
-in vec2 frag_pos;
-out vec4 outColor;
+varying vec2 frag_pos;
 
 void main() {
   float alpha = 1.0 - smoothstep(0.75, 1.0, length(frag_pos));
   if(alpha == 0.0) {
     discard;
   } else {
-    outColor = vec4( r, g, b, alpha);
+    gl_FragColor = vec4( r, g, b, alpha);
   }
 }
   </script>
-  <script id="smoothstepPolylineSegment" type="notjs">#version 300 es
-    precision highp int;
+  <script id="smoothstepPolylineSegment" type="notjs">
     precision highp float;
-    in ivec4 edge;
-    out float edgeA;
-    out float edgeAFade;
-    uniform uint x;
-    uniform uint y;
-    uniform uint z;
+    attribute vec4 edge;
+    varying float edgeA;
+    varying float edgeAFade;
+    uniform float x;
+    uniform float y;
+    uniform float z;
     uniform float edgeWidth;
     uniform float edgeDecayPx;
     uniform float edgeDisappearPx;
@@ -92,19 +90,19 @@ void main() {
     uniform float partialWidth;
     uniform float edgeWorldWidthWrap;
     void main() {
-      int modelscaledown = int(exp2(22.0 - float(z)));
-      int viewwidth = 1073741824 / modelscaledown;
-      ivec4 unsortedsrcdst = abs(edge) / modelscaledown;
-      ivec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
+      float modelscaledown = exp2(22.0 - float(z));
+      float viewwidth = 1073741824.0 / modelscaledown;
+      vec4 unsortedsrcdst = abs(edge) / modelscaledown;
+      vec4 srcdst = (unsortedsrcdst.x < unsortedsrcdst.z) ? unsortedsrcdst.xyzw : unsortedsrcdst.zwxy;
 
       float tileEdgeStart = partialStart * 256.0;
       float tileEdgeWidth = partialWidth * 256.0;
       float tileEdgeEnd   = tileEdgeStart + tileEdgeWidth;
 
-      vec4 unwrappedEdgeRelUR = vec4(srcdst - (ivec4(x,y,x,y) * 256));
-      bool notToBeWrapped = float(srcdst.z - srcdst.x) < (edgeWorldWidthWrap * float(viewwidth));
+      vec4 unwrappedEdgeRelUR = vec4(srcdst - (vec4(x,y,x,y) * 256.0));
+      bool notToBeWrapped = (srcdst.z - srcdst.x) < (edgeWorldWidthWrap * float(viewwidth));
       bool srcCloserThanDst = abs(unwrappedEdgeRelUR.z - tileEdgeStart - tileEdgeWidth / 2.0) > abs(unwrappedEdgeRelUR.x - tileEdgeStart - tileEdgeWidth / 2.0);
-      vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-viewwidth,0,0,0) : vec4(0,0,viewwidth,0)));
+      vec4 edgeRelUR = (notToBeWrapped) ? unwrappedEdgeRelUR : (unwrappedEdgeRelUR.zwxy + ((srcCloserThanDst) ? vec4(-viewwidth,0.0,0.0,0.0) : vec4(0.0,0.0,viewwidth,0.0)));
 
       float triStart = max(tileEdgeStart, edgeRelUR.x);
       float triEnd = min(tileEdgeEnd, edgeRelUR.z);
@@ -121,26 +119,25 @@ void main() {
       bool edgeInRange = edgeRelUR.x <= tileEdgeEnd && tileEdgeStart <= edgeRelUR.z && length(edgeWidthProgress) > 0.0;
 
       vec3 zcross = vec3(0,0,sign(edge.y)) * edgeWidth;
-      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.x > 0) ? (vec2(triEnd, latProgress[1])   + vec2(cross(normalize(vec3(1.0,slopeProgress[3]-slopeProgress[2],0.0)),zcross * edgeWidthProgress[1]))) :
-                                                                                     (vec2(triStart, latProgress[0]) + vec2(cross(normalize(vec3(1.0,slopeProgress[1]-slopeProgress[0],0.0)),zcross * edgeWidthProgress[0]))))
+      gl_Position = !edgeInRange ? vec4(-2.0,-2.0,2.0,1.0) : vec4( ( ((edge.x > 0.0) ? (vec2(triEnd, latProgress[1])   + vec2(cross(normalize(vec3(1.0,slopeProgress[3]-slopeProgress[2],0.0)),zcross * edgeWidthProgress[1]))) :
+                                                                                       (vec2(triStart, latProgress[0]) + vec2(cross(normalize(vec3(1.0,slopeProgress[1]-slopeProgress[0],0.0)),zcross * edgeWidthProgress[0]))))
                                                                      * vec2(1.0 / 128.0, -1.0 / 128.0)) + vec2(-1.0, 1.0), 0.0, 1.0);
 
 
-      edgeA = (edge.y > 0) ? -1.0 : 1.0;
-      edgeAFade = (edge.x > 0) ? edgeWidthProgress[1] : edgeWidthProgress[0];
+      edgeA = (edge.y > 0.0) ? -1.0 : 1.0;
+      edgeAFade = (edge.x > 0.0) ? edgeWidthProgress[1] : edgeWidthProgress[0];
     }
   </script>
-  <script id="lineSegmentColor" type="notjs">#version 300 es
+  <script id="lineSegmentColor" type="notjs">
     precision lowp float;
-    in float edgeA;
-    in float edgeAFade;
+    varying float edgeA;
+    varying float edgeAFade;
     uniform float edgeR;
     uniform float edgeG;
     uniform float edgeB;
     uniform float edgeMaxAlpha;
-    out vec4 outcolor;
     void main() {
-      outcolor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * edgeAFade * (1.0 - smoothstep(0.9,1.0, abs(edgeA))));
+      gl_FragColor = vec4(edgeR, edgeG, edgeB, edgeMaxAlpha * edgeAFade * (1.0 - smoothstep(0.9,1.0, abs(edgeA))));
     }
   </script>
 
@@ -172,7 +169,7 @@ void main() {
     });
   </script>
   <script>
-    ptc = new Int32Array(lat30m.length * 12); // lng- lat- lng- lat+ lng+ lat+  lng+ lat+ lng+ lat- lng- lat-    lng...
+    ptc = new Float32Array(lat30m.length * 12); // lng- lat- lng- lat+ lng+ lat+  lng+ lat+ lng+ lat- lng- lat-    lng...
     used.forEach((e,i) => { if(e>0) {
       const lat = lat30m[i];
       const lng = lng30m[i];
@@ -181,7 +178,7 @@ void main() {
       ptc[i*12+0] *= -1; ptc[i*12+1] *= -1; ptc[i*12+2] *= -1; ptc[i*12+9] *= -1; ptc[i*12+10] *= -1; ptc[i*12+11] *= -1;
     }});
     //edgeS[0] = 268951; edgeD[0] = 2138;
-    etc = new Int32Array(edgeS.length * 24); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da / sn- sa+ dn da sn+ sa- dn da sn- sa- dn da // sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
+    etc = new Float32Array(edgeS.length * 24); // slng- slat+ dlng dlat sn+ sa+ dn da sn+ sa- dn da / sn- sa+ dn da sn+ sa- dn da sn- sa- dn da // sn- sa+ dn da sn+ sa+ dn da sn+ sa- dn da
     //etc = new Int32Array(5 * 24);
     Array.from(edgeS).slice(0,1000000).forEach((s,i) => {
       const ei = i * 24;
@@ -201,14 +198,16 @@ void main() {
   <script>
     "use strict";
     console.log('hi lol');
-    const gl = document.querySelector("#c").getContext("webgl2");
+    const gl = document.querySelector("#c").getContext("webgl");
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable( gl.BLEND );
     gl.blendFuncSeparate( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA );
 
     const pointProgramInfo = twgl.createProgramInfo(gl, ["pointBoundingBoxes", "roundPointColors"]);
     const polylineProgramInfo = twgl.createProgramInfo(gl, ["smoothstepPolylineSegment", "lineSegmentColor"])
     const arrays = {
-      p30b1: {numComponents: 2, data: ptc}
+      points: {numComponents: 2, data: ptc}
     };
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 
