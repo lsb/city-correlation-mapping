@@ -1,0 +1,1 @@
+seq 27 -1 1 | parallel "wget --retry-connrefused --waitretry=1 -nv -O {}.xml.gz https://dumps.wikimedia.your.org/enwiki/$(date +%Y%m01)/enwiki-$(date +%Y%m01)-stub-meta-history{}.xml.gz && (zcat {}.xml.gz | docker run -i --log-driver=none mediawiki-json-revisions | gzip > {}.json.gz) && rm {}.xml.gz"
