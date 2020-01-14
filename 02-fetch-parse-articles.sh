@@ -4,4 +4,3 @@ parallel '(bzcat {} | docker run -i --log-driver=none mediawiki-json-revisions |
 parallel 'zcat {} | jq -c "select(.rpagens == (0|tostring))" | docker run -i --log-driver=none mediawiki-json-coords | gzip > coords-articles-{#}.json.gz' ::: articles-*.json.gz
 zcat coords-articles-*.json.gz | jq '{"key": .id, "value": true}' | jq -s from_entries > page-ids.json
 seq 27 -1 1 | parallel --verbose 'zcat {}.json.gz | ./jq-prune.sh | gzip > pruned-{}.json.gz'
-seq 27 -1 1 | parallel 'mv pruned-{}.json.gz {}.json.gz'
